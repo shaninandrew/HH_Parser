@@ -55,7 +55,7 @@ using (Site site = new Site(test_url, "vacancy-serp-item-body"))
 
 
 public class Proffi
-{                                  с
+{                                  
     public string _Name { get; set;  }
     public string _Salary { get; set; }
     public string _Address { get; set; }
