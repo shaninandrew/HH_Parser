@@ -14,12 +14,12 @@ string test_url = "https://hh.ru/search/vacancy?search_field=name&search_field=c
 
 ParseHH parser = new ParseHH(test_url,1,30,350);
 
-System.IO.File.WriteAllText("out.csv", "Name;Salary min;Salary max;Link;Function;Address");
+System.IO.File.WriteAllText("out.csv", "Name;Salary min;Salary max;Link;Function;Address\r\n");
 
 foreach (Proffi proffi in parser.proffi_list)
 {
     Console.WriteLine($" {proffi.Name_Formated ,-50} │ {proffi.GetMin,7} - {proffi.GetMax,7} │  {proffi.Function,13}│ {proffi.LinkHref} │ {proffi._Address,-50}");
-    System.IO.File.AppendAllText("out.csv", $"{proffi.Name};{proffi.GetMin};{proffi.GetMax};{proffi.LinkHref};{proffi.Function};{proffi._Address}");
+    System.IO.File.AppendAllText("out.csv", $"{proffi.Name};{proffi.GetMin};{proffi.GetMax};{proffi.LinkHref};{proffi.Function};{proffi._Address}\r\n");
 }
 
 
