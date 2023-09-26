@@ -12,7 +12,7 @@ Console.OutputEncoding = Encoding.UTF8;
 Console.WriteLine("Закачка данных...");
 string test_url = "https://hh.ru/search/vacancy?search_field=name&search_field=company_name&search_field=description&enable_snippets=false&L_save_area=true&employment=full&schedule=remote&text=%D1%80%D0%B0%D0%B7%D1%80%D0%B0%D0%B1%D0%BE%D1%82%D1%87%D0%B8%D0%BA+C%23&page=*PAGE*";
 
-ParseHH parser = new ParseHH(test_url,1,30,350);
+ParseHH parser = new ParseHH(test_url,1,70,350);
 
 System.IO.File.WriteAllText("out.csv", "Name;Salary min;Salary max;Link;Function;Address\r\n");
 
@@ -192,7 +192,7 @@ public class Proffi
 
         bool is_Junior = tmp.IndexOf("junior") >= 0 || tmp.IndexOf("джун") >= 0 || tmp.IndexOf("джуниор") >= 0 ||  tmp.IndexOf("интерн")>=0 || tmp.IndexOf("intern")>=0 || tmp.IndexOf("стажер")>=0;
         bool is_Middle = tmp.IndexOf("middle") >= 0 || tmp.IndexOf("мидл") >= 0 || tmp.IndexOf("миддл") >= 0;
-        bool is_Senior = tmp.IndexOf("senior") >= 0 || tmp.IndexOf("синьор") >= 0 || tmp.IndexOf("синьёр") >= 0;
+        bool is_Senior = tmp.IndexOf("senior") >= 0 || tmp.IndexOf("синьор") >= 0 || tmp.IndexOf("синьёр") >= 0 ;
         bool is_Lead = tmp.IndexOf("lead") >= 0 || tmp.IndexOf("лид") >= 0 || tmp.IndexOf("тимлид") > 0 || tmp.IndexOf("ведущий программист") > 0; ;
         bool is_QA = tmp.IndexOf("qa") >=0 || tmp.IndexOf("тестир") >= 0  ;
         bool is_DevOps = tmp.IndexOf("devops") >= 0 || tmp.IndexOf("dev-ops") >= 0;
@@ -277,11 +277,17 @@ class Site    :IDisposable
 
     }
 
-    public  void Dispose()
+    public void Dispose()
     {
-        _linx.Clear();
-        _classes.Clear();
-         GC.Collect();
+        try {
+            _linx.Clear();
+            _classes.Clear();
+        }
+        finally 
+        { 
+
+            GC.Collect();
+        }
 
     }
 
