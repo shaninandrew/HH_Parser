@@ -7,7 +7,7 @@ using AngleSharp.Io;
 
 
 Console.WriteLine("Parse data");
-string test_url = "https://hh.ru/vacancies/administrator?hhtmFromLabel=rainbow_profession&hhtmFrom=main";
+string test_url = "https://hh.ru/vacancies/razrabotchik_c_sharp";
 
 using (Site site = new Site(test_url, "vacancy-serp-item-body"))
 {
@@ -21,8 +21,6 @@ using (Site site = new Site(test_url, "vacancy-serp-item-body"))
 
     foreach (IElement item in site.GetAllClasses)
     {
-       
-
         Proffi proffi = new Proffi("");
 
         foreach (var span in item.GetElementsByTagName("span"))
@@ -49,15 +47,38 @@ using (Site site = new Site(test_url, "vacancy-serp-item-body"))
 
     foreach (Proffi proffi in proffi_list)
     {
-        Console.WriteLine($" {proffi._Name} // {proffi._Salary}  // {proffi._Address} // {proffi._Function} ");
+        Console.WriteLine($" {proffi._Name} // {proffi.GetMin} - {proffi.GetMax} // {proffi._Address} // {proffi._Function} ");
     }
 } //using
 
 
 public class Proffi
-{                                  
-    public string _Name { get; set;  }
-    public string _Salary { get; set; }
+{
+    public string _Name { get; set; }
+
+    private string _Min_Salary = "";
+    private string _Max_Salary = "";
+
+    public string GetMin { get { return _Min_Salary; } }
+    public string GetMax { get { return _Max_Salary; } }
+
+    public string _Salary 
+        {
+            get { return _Min_Salary;  }
+            set {   string x = value.Replace(" ", ""); 
+                    if (x.IndexOf("–") > -1) 
+                        { 
+                            _Max_Salary = x.Substring(x.IndexOf("–") + 1);
+                            _Min_Salary = x.Substring(0, x.IndexOf("–") );
+                        }
+                    else
+                        {
+                            _Max_Salary = x;
+                            _Min_Salary = _MaxSalary;
+                        }
+                } 
+        }
+    public string _MaxSalary { get; set; }
     public string _Address { get; set; }
 
     public string _Function { get; set; }
@@ -117,8 +138,7 @@ class Site    :IDisposable
     {
         _linx.Clear();
         _classes.Clear();
-
-     GC.Collect();
+         GC.Collect();
 
     }
 
