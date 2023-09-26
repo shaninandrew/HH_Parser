@@ -12,7 +12,7 @@ Console.OutputEncoding = Encoding.UTF8;
 Console.WriteLine("Закачка данных...");
 string test_url = "https://hh.ru/search/vacancy?search_field=name&search_field=company_name&search_field=description&enable_snippets=false&L_save_area=true&employment=full&schedule=remote&text=%D1%80%D0%B0%D0%B7%D1%80%D0%B0%D0%B1%D0%BE%D1%82%D1%87%D0%B8%D0%BA+C%23&page=*PAGE*";
 
-ParseHH parser = new ParseHH(test_url,1,70,350);
+ParseHH parser = new ParseHH(test_url,1,40,650);
 
 System.IO.File.WriteAllText("out.csv", "Name;Salary min;Salary max;Link;Function;Address\r\n");
 
@@ -64,7 +64,7 @@ public class ParseHH
                  {
 
                     while (Update_AllLinks)
-                    { Thread.Sleep(10); }
+                    { Thread.Sleep(20); }
                     
                     Update_AllLinks=true;
                     AllLinks.AddRange(site.GetAllLinks.AsParallel());
