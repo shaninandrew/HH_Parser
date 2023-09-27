@@ -19,16 +19,27 @@ Console.WriteLine("Закачка данных...");
 //C#
 // "https://hh.ru/search/vacancy?search_field=name&search_field=company_name&search_field=description&enable_snippets=false&L_save_area=true&employment=full&schedule=remote&text=%D1%80%D0%B0%D0%B7%D1%80%D0%B0%D0%B1%D0%BE%D1%82%D1%87%D0%B8%D0%BA+C%23&page=*PAGE*";
 
-string test_url = "https://hh.ru/search/vacancy?search_field=name&search_field=company_name&search_field=description&enable_snippets=false&L_save_area=true&employment=full&schedule=remote&text=%D1%80%D0%B0%D0%B7%D1%80%D0%B0%D0%B1%D0%BE%D1%82%D1%87%D0%B8%D0%BA+C%23&page=*PAGE*";
+//Безопасник
+//https://hh.ru/search/vacancy?ored_clusters=true&schedule=remote&search_field=company_name&search_field=name&search_field=description&text=%D1%81%D0%BF%D0%B5%D1%86%D0%B8%D0%B0%D0%BB%D0%B8%D1%81%D1%82+%D0%BF%D0%BE+%D0%B8%D0%BD%D1%84%D0%BE%D1%80%D0%BC%D0%B0%D1%86%D0%B8%D0%BE%D0%BD%D0%BD%D0%BE%D0%B9+%D0%B1%D0%B5%D0%B7%D0%BE%D0%BF%D0%B0%D1%81%D0%BD%D0%BE%D1%81%D1%82%D0%B8&enable_snippets=false&L_save_area=true&page=*PAGE*
 
-ParseHH parser = new ParseHH(test_url,1,100,250);
+//Кадры
+//https://hh.ru/search/vacancy?ored_clusters=true&schedule=remote&area=113&search_field=name&search_field=company_name&search_field=description&text=%D0%BA%D0%B0%D0%B4%D1%80%D0%BE%D0%B2%D0%B8%D0%BA&enable_snippets=false&L_save_area=true
 
-System.IO.File.WriteAllText("out.csv", "Name;Salary min;Salary max;Link;Function;Address\r\n");
+string test_url = "https://hh.ru/search/vacancy?ored_clusters=true&schedule=remote&area=113&search_field=name&search_field=company_name&search_field=description&text=%D0%BA%D0%B0%D0%B4%D1%80%D0%BE%D0%B2%D0%B8%D0%BA&enable_snippets=false&L_save_area=true&page=*PAGE*";
 
-foreach (Proffi proffi in parser.proffi_list)
+ParseHH parser = new ParseHH(test_url,1,100,350);
+
+System.IO.File.WriteAllText("out.csv", "Name;Salary min;Salary max;Link;Grade;Skills;Address\r\n");
+
+Thread.Sleep(1000);
+lock (parser)
 {
-    Console.WriteLine($" {proffi.Name_Formatted ,-50} │ {proffi.GetMin,7} - {proffi.GetMax,7} │  {proffi.Function,13}│ {proffi.LinkHref} │ {proffi.Address,-50}");
-    System.IO.File.AppendAllText("out.csv", $"{proffi.Name};{proffi.GetMin};{proffi.GetMax};{proffi.LinkHref};{proffi.Function};{proffi.Address}\r\n");
+    foreach (Proffi proffi in parser.proffi_list)
+    {
+        Console.WriteLine($" {proffi.Name_Formatted,-50} │ {proffi.GetMin,7} - {proffi.GetMax,7} │  {proffi.Grade,13}│ {proffi.LinkHref} │ {proffi.Skills,-30}");
+        System.IO.File.AppendAllText("out.csv", $"{proffi.Name};{proffi.GetMin};{proffi.GetMax};{proffi.LinkHref};{proffi.Grade};{proffi.Skills};{proffi.Address}\r\n");
+
+    }
 }
 
 
@@ -38,8 +49,7 @@ foreach (Proffi proffi in parser.proffi_list)
 /// </summary>
 public class ParseHH
 {
-    
-
+  
     public List<Proffi> proffi_list = null;
     public List <IElement> AllLinks = null;
     private int TimeOut = 300;
@@ -73,7 +83,7 @@ public class ParseHH
                 int i = ix;
 
                  
-                 using (Site site = new Site(url.Replace("*PAGE*", i.ToString()), "vacancy-serp-item-body",TimeOut))
+                 using (Site site = new Site(url.Replace("*PAGE*", i.ToString()), "vacancy-serp-item-body",null,TimeOut))
                  {
                     if (site == null)
                     {
@@ -123,8 +133,20 @@ public class ParseHH
                           //
                          proffi.Address = item.GetElementsByClassName("bloko-text").First().TextContent;
 
-                         // g-user-content  - функции
-                         //proffi._Function = item.GetElementsByClassName("g-user-content").First().TextContent;
+                        // g-user-content  - функции
+                        //proffi._Function = item.GetElementsByClassName("g-user-content").First().TextContent;
+
+                        if (proffi.LinkHref != "")
+                        {
+                            //дергаем списки        навыков
+    
+                            Site sub =new Site(proffi.LinkHref, "bloko-tag-list",null,TimeOut);
+                            proffi.Skills = "";
+                            foreach (Element e in sub.GetAllClasses)
+                            {
+                                proffi.Skills += e.TextContent +" // ";
+                            }
+                        }
 
                          proffi_list.Add(proffi);
 
@@ -152,8 +174,19 @@ public class ParseHH
         AllLinks = AllLinks.Distinct().ToList();
         proffi_list = proffi_list.Distinct().ToList();
 
-        Console.WriteLine("готово!");
+        //сортировака по типам должности
+        proffi_list.Sort(CompareProffies);
+
+        Console.WriteLine(" готово!");
+
+
+
     } //ParseHH
+
+    private static int CompareProffies(Proffi a, Proffi b)
+    {
+        return (a.Grade.CompareTo(b.Grade));
+    }
 
 }
 
@@ -173,18 +206,23 @@ public class Proffi
 
     private string _Name = "";
     private string _Address = "";
+    private string _Skills = "";
+
     public string Name
     {
         get { return _Name; }
-        set { _Name = value; Function_Update_by_CheckNames(value); }
+        set { _Name = value.Replace(";"," ").Replace("\r\n"," "); Function_Update_by_CheckNames(value); }
     }
     public string Name_Formatted { get { int len = _Name.Length; if (len > 50) { len = 50; }  return _Name.Substring(0, len); } }
 
     private string _Min_Salary = "";
     private string _Max_Salary = "";
 
-    public string GetMin { get { return _Min_Salary; } }
-    public string GetMax { get { return _Max_Salary; } }
+    /// <summary>
+    /// Размер вознаграждения без единииц
+    /// </summary>
+    public string GetMin { get { return _Min_Salary.Replace("р",""); } }
+    public string GetMax { get { return _Max_Salary.Replace("р", "");  } }
 
     public string _Salary 
         {
@@ -280,15 +318,21 @@ public class Proffi
 
     public string Address 
         {   get { return _Address;  }
-            set { _Address = value; } }
+            set { _Address = value.Replace(";", " ").Replace("\r\n", " ");  } }
 
-    public string Function { get; set; }
+    public string Skills 
+        { 
+            get { return _Skills; } 
+            set { _Skills = value.Replace(";", " ").Replace("\r\n", " "); } 
+        }
+
+    public string Grade { get; set; }
 
     public string LinkHref { get; set; }
 
-    public Proffi(string Name)
+    public Proffi(string name)
     {
-       _Name=Name;
+       Name=name;
     }
 
     public void Function_Update_by_CheckNames(string Name)
@@ -304,8 +348,20 @@ public class Proffi
         bool is_Lead = tmp.IndexOf("lead") >= 0 || tmp.IndexOf("лид") >= 0 || tmp.IndexOf("тимлид") > 0 || tmp.IndexOf("ведущий программист") > 0; ;
         bool is_QA = tmp.IndexOf("qa") >=0 || tmp.IndexOf("тестир") >= 0  ;
         bool is_DevOps = tmp.IndexOf("devops") >= 0 || tmp.IndexOf("dev-ops") >= 0;
+        bool is_Admin = tmp.IndexOf("системный администратор") >= 0;
+        bool is_Buh = tmp.IndexOf("бухгалтер") >= 0 ;
+        bool is_HR = tmp.IndexOf("кадров") >= 0 || tmp.IndexOf("рекрутер") >= 0 || tmp.IndexOf("hr") >= 0;
+        bool is_Leader = tmp.IndexOf("начальник") >= 0 || tmp.IndexOf("руководитель") >= 0;
+        bool is_Seller = tmp.IndexOf("отдела продаж") >= 0 || tmp.IndexOf("продавец") >= 0;
+        bool is_Oper = tmp.IndexOf("оператор") >= 0 || tmp.IndexOf("call-") >= 0;
 
-        Function = is_Junior ? "Джун" : (is_Middle ? "Средний" : (is_Senior ? "Синьор" : (is_Lead ? "Тимлид" : is_FullStack ? "Мастер" :  (is_DevOps ? "Devops" : (is_QA ? "Тестировщик" : "Специалист")))));
+        Grade = is_Junior ? "Джун" : (is_Middle ? "Средний" : (is_Senior ? "Синьор" : (is_Lead ? "Тимлид" : is_FullStack ? "Мастер" :  (is_DevOps ? "Devops" : (is_QA ? "Тестировщик" : "Специалист")))));
+        Grade = is_Buh ? "бухгалтер" : Grade;
+        Grade = is_Admin ? "админстратор" : Grade;
+        Grade = is_Leader ? "руководитель" : Grade;
+        Grade = is_Seller ? "продавец" : Grade;
+        Grade = is_Oper ? "оператор" : Grade;
+        Grade = is_HR ? "HR" : Grade;
 
     }
     
@@ -330,7 +386,11 @@ class Site    :IDisposable
     /// </summary>
     public List<IElement> GetAllClasses { get { return _classes; } }
 
-    public Site(string url , string? get_data_by_class, int TimeOut=300) 
+
+    private List<IElement> _tags = null;
+    public List<IElement> GetAllTags { get { return _tags; } }
+
+    public Site(string url , string? get_data_by_class, string? get_data_by_tags, int TimeOut=300) 
     {
 
         HttpClient http = new HttpClient();
@@ -342,7 +402,7 @@ class Site    :IDisposable
         do {
             try
             {
-                data = http.GetStringAsync(new Uri(url)).Result;
+                data =  http.GetStringAsync(new Uri(url)).Result;
             }
             catch (Exception ex)
             {
@@ -369,7 +429,11 @@ class Site    :IDisposable
         //Защита от слепков
         data = data.Replace("/><", "/> <");
         data = data.Replace("><", "> <");
-        data = data.Replace("₽", "Р");
+        data = data.Replace("₽", "р");
+        data = data.Replace("\u000A", " ");
+        data = data.Replace("\r", " ");
+        data = data.Replace("\n", " ");
+        data = data.Replace("\t", " ");
 
 
         AngleSharp.Html.Parser.HtmlParser parser = new AngleSharp.Html.Parser.HtmlParser();
@@ -380,9 +444,12 @@ class Site    :IDisposable
         //# a11y-main-content > div:nth-child(74) > div > div.vacancy-serp-item-body > div
 
         if (get_data_by_class != null)
-        { _classes = doc.GetElementsByClassName(get_data_by_class).Where(i => i != null).ToList<IElement>(); }
-        
+            { _classes = doc.GetElementsByClassName(get_data_by_class).Where(i => i != null).ToList<IElement>(); }
 
+        if (get_data_by_tags != null)
+            {
+                _tags = doc.GetElementsByTagName(get_data_by_tags).ToList();
+            }
     }
 
     public void Dispose()
