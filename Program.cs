@@ -3,16 +3,25 @@ using AngleSharp;
 using AngleSharp.Dom;
 using AngleSharp.Html;
 using AngleSharp.Io;
+using System;
 using System.Diagnostics;
 using System.Reflection.Metadata;
 using System.Text;
 using System.Threading;
+using static System.Net.WebRequestMethods;
 
 Console.OutputEncoding = Encoding.UTF8;
 Console.WriteLine("Закачка данных...");
+
+// Java
+// https://hh.ru/search/vacancy?ored_clusters=true&search_field=name&search_field=company_name&search_field=description&text=java&enable_snippets=false&L_save_area=true
+
+//C#
+// "https://hh.ru/search/vacancy?search_field=name&search_field=company_name&search_field=description&enable_snippets=false&L_save_area=true&employment=full&schedule=remote&text=%D1%80%D0%B0%D0%B7%D1%80%D0%B0%D0%B1%D0%BE%D1%82%D1%87%D0%B8%D0%BA+C%23&page=*PAGE*";
+
 string test_url = "https://hh.ru/search/vacancy?search_field=name&search_field=company_name&search_field=description&enable_snippets=false&L_save_area=true&employment=full&schedule=remote&text=%D1%80%D0%B0%D0%B7%D1%80%D0%B0%D0%B1%D0%BE%D1%82%D1%87%D0%B8%D0%BA+C%23&page=*PAGE*";
 
-ParseHH parser = new ParseHH(test_url,1,40,650);
+ParseHH parser = new ParseHH(test_url,1,100,250);
 
 System.IO.File.WriteAllText("out.csv", "Name;Salary min;Salary max;Link;Function;Address\r\n");
 
@@ -29,6 +38,7 @@ foreach (Proffi proffi in parser.proffi_list)
 /// </summary>
 public class ParseHH
 {
+    
 
     public List<Proffi> proffi_list = null;
     public List <IElement> AllLinks = null;
@@ -62,17 +72,21 @@ public class ParseHH
             {
                 int i = ix;
 
-                 Loading++;
+                 
                  using (Site site = new Site(url.Replace("*PAGE*", i.ToString()), "vacancy-serp-item-body",TimeOut))
                  {
-                    if (site == null) return ;
+                    if (site == null)
+                    {
+                        
+                        return;
+                    }
 
                     while (Update_AllLinks)
                             { Thread.Sleep(20); }
                     
                     Update_AllLinks=true;
                     if (site != null)
-                        try { AllLinks.AddRange(site.GetAllLinks.AsParallel()); } catch { return ; ; }
+                        try { AllLinks.AddRange(site.GetAllLinks.AsParallel()); } catch {  return; }
                     Update_AllLinks = false;
 
 
@@ -84,7 +98,7 @@ public class ParseHH
 
                     //ФИльтр
 
-
+                    Loading++;
                     foreach (IElement item in site.GetAllClasses)
                      {
                          Proffi proffi = new Proffi("");
@@ -147,6 +161,16 @@ public class ParseHH
 
 public class Proffi
 {
+
+    /// <summary>
+    /// Текущий курс евро и доллара
+    /// </summary>
+    public int EURO = 103;
+    public int DOLLAR = 99;
+    public double TENGE = 0.2;
+    public double BEL_RUB = 38;
+
+
     private string _Name = "";
     private string _Address = "";
     public string Name
@@ -175,8 +199,83 @@ public class Proffi
                         {
                             _Max_Salary = x;
                             _Min_Salary = _Max_Salary;
+            }
+
+
+
+
+            // - -- пЕРЕВОД ВАЛЮТ
+
+                        if (_Min_Salary.IndexOf("br") > -1)
+                        {
+                            _Min_Salary = _Min_Salary.Replace("br", "");
+                            _Min_Salary = ((int)(int.Parse(_Min_Salary) * BEL_RUB)).ToString() + "р";
                         }
-                } 
+
+                        if (_Max_Salary.IndexOf("br") > -1)
+                        {
+                            _Max_Salary = _Max_Salary.Replace("br", "");
+                            _Max_Salary = ((int)(int.Parse(_Max_Salary) * BEL_RUB)).ToString() + "р";
+                        }
+
+                        if (_Min_Salary.IndexOf("₸") > -1)
+                        {
+                            _Min_Salary = _Min_Salary.Replace("₸", "");
+                            _Min_Salary = ((int)(int.Parse(_Min_Salary) * TENGE)).ToString() + "р";
+                        }
+
+                        if (_Max_Salary.IndexOf("₸") > -1)
+                        {
+                            _Max_Salary = _Max_Salary.Replace("₸", "");
+                            _Max_Salary = ((int)(int.Parse(_Max_Salary) * TENGE)).ToString() + "р";
+
+                            if ((_Min_Salary.IndexOf("₸") == -1) && (_Min_Salary.IndexOf("р")==-1))
+                            {
+                                _Min_Salary = ((int)(int.Parse(_Min_Salary) * TENGE)).ToString() + "р";
+
+                            }
+                        }
+
+                        if (_Min_Salary.IndexOf("€") > -1)
+                        {
+                            _Min_Salary = _Min_Salary.Replace("€", "");
+                            _Min_Salary = ((int)  (int.Parse(_Min_Salary) * EURO)).ToString() + "р";
+                        }
+
+
+                        if (_Min_Salary.IndexOf("$") > -1)
+                        {
+                            _Min_Salary = _Min_Salary.Replace("$", "");
+                            _Min_Salary = ((int)(int.Parse(_Min_Salary) * DOLLAR)).ToString() + "р";
+                        }
+
+
+                        if (_Max_Salary.IndexOf("€") > -1)
+                        {
+                            _Max_Salary = _Max_Salary.Replace("€", "");
+                            _Max_Salary = ((int)(int.Parse(_Max_Salary) * EURO)).ToString() + "р";
+
+                            if ((_Min_Salary.IndexOf("€") == -1)   && (_Min_Salary.IndexOf("р") == -1))
+                            {
+                                _Min_Salary = ((int)(int.Parse(_Min_Salary) * EURO)).ToString() + "р";
+                
+                            }
+
+                        }
+
+
+                        if (_Max_Salary.IndexOf("$") > -1)
+                        {
+                            _Max_Salary = _Max_Salary.Replace("$", "");
+                            _Max_Salary = ((int)(int.Parse(_Max_Salary) * DOLLAR)).ToString() + "р";
+                            if ((_Min_Salary.IndexOf("$") == -1)         && (_Min_Salary.IndexOf("р") == -1))
+                            {
+                                _Min_Salary = ((int)(int.Parse(_Min_Salary) * DOLLAR)).ToString() + "р";
+
+                            }
+                        }
+
+            } 
         }
 
     public string Address 
