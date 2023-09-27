@@ -3,10 +3,12 @@ using AngleSharp;
 using AngleSharp.Dom;
 using AngleSharp.Html;
 using AngleSharp.Io;
+using ScanHH;
 using System;
 using System.Diagnostics;
 using System.Reflection.Metadata;
 using System.Text;
+using System.Text.Json;
 using System.Threading;
 using static System.Net.WebRequestMethods;
 
@@ -27,9 +29,29 @@ Console.WriteLine("Закачка данных...");
 
 string test_url = "https://hh.ru/search/vacancy?ored_clusters=true&schedule=remote&area=113&search_field=name&search_field=company_name&search_field=description&text=%D0%BA%D0%B0%D0%B4%D1%80%D0%BE%D0%B2%D0%B8%D0%BA&enable_snippets=false&L_save_area=true&page=*PAGE*";
 
-ParseHH parser = new ParseHH(test_url,1,100,350);
 
-System.IO.File.WriteAllText("out.csv", "Name;Salary min;Salary max;Link;Grade;Skills;Address\r\n");
+//Принимамем аргументы - имя файла конфига
+var MyArgs = args.ToList();
+Config cfg = new Config();
+cfg.Target = test_url;
+
+string sample_cfg = JsonSerializer.Serialize(cfg);
+System.IO.File.WriteAllText("sample_cfg.json", sample_cfg);  
+
+
+if (MyArgs.Count > 0)
+{
+    //конфиг
+    var config = System.IO.File.ReadAllText(MyArgs[0]);
+    cfg = JsonSerializer.Deserialize<Config>(config);
+
+}
+
+
+
+ParseHH parser = new ParseHH(cfg.Target,1, cfg.MaxList, cfg.Pause);
+
+System.IO.File.WriteAllText(cfg.OutFile, "Name;Salary min;Salary max;Link;Grade;Skills;Address\r\n");
 
 Thread.Sleep(1000);
 lock (parser)
@@ -37,7 +59,7 @@ lock (parser)
     foreach (Proffi proffi in parser.proffi_list)
     {
         Console.WriteLine($" {proffi.Name_Formatted,-50} │ {proffi.GetMin,7} - {proffi.GetMax,7} │  {proffi.Grade,13}│ {proffi.LinkHref} │ {proffi.Skills,-30}");
-        System.IO.File.AppendAllText("out.csv", $"{proffi.Name};{proffi.GetMin};{proffi.GetMax};{proffi.LinkHref};{proffi.Grade};{proffi.Skills};{proffi.Address}\r\n");
+        System.IO.File.AppendAllText(cfg.OutFile, $"{proffi.Name};{proffi.GetMin};{proffi.GetMax};{proffi.LinkHref};{proffi.Grade};{proffi.Skills};{proffi.Address}\r\n");
 
     }
 }
