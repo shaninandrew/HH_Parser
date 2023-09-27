@@ -16,7 +16,7 @@ Console.OutputEncoding = Encoding.UTF8;
 Console.WriteLine("Закачка данных...");
 
 // Java
-// https://hh.ru/search/vacancy?ored_clusters=true&search_field=name&search_field=company_name&search_field=description&text=java&enable_snippets=false&L_save_area=true
+// https://hh.ru/search/vacancy?ored_clusters=true&search_field=name&search_field=company_name&search_field=description&text=java&enable_snippets=false&L_save_area=true&page=*PAGE*
 
 //C#
 // "https://hh.ru/search/vacancy?search_field=name&search_field=company_name&search_field=description&enable_snippets=false&L_save_area=true&employment=full&schedule=remote&text=%D1%80%D0%B0%D0%B7%D1%80%D0%B0%D0%B1%D0%BE%D1%82%D1%87%D0%B8%D0%BA+C%23&page=*PAGE*";
@@ -164,10 +164,15 @@ public class ParseHH
     
                             Site sub =new Site(proffi.LinkHref, "bloko-tag-list",null,TimeOut);
                             proffi.Skills = "";
-                            foreach (Element e in sub.GetAllClasses)
+                            //защита от косяка
+                            try
                             {
-                                proffi.Skills += e.TextContent +" // ";
+                                foreach (Element e in sub.GetAllClasses)
+                                {
+                                    proffi.Skills += e.TextContent + " // ";
+                                }
                             }
+                            catch { }
                         }
 
                          proffi_list.Add(proffi);
@@ -370,12 +375,13 @@ public class Proffi
         bool is_Lead = tmp.IndexOf("lead") >= 0 || tmp.IndexOf("лид") >= 0 || tmp.IndexOf("тимлид") > 0 || tmp.IndexOf("ведущий программист") > 0; ;
         bool is_QA = tmp.IndexOf("qa") >=0 || tmp.IndexOf("тестир") >= 0  ;
         bool is_DevOps = tmp.IndexOf("devops") >= 0 || tmp.IndexOf("dev-ops") >= 0;
-        bool is_Admin = tmp.IndexOf("системный администратор") >= 0;
+        bool is_Admin = tmp.IndexOf("системный администратор") >= 0 || (tmp.IndexOf("системн") >= 0 && tmp.IndexOf("администрат") >= 0);
         bool is_Buh = tmp.IndexOf("бухгалтер") >= 0 ;
         bool is_HR = tmp.IndexOf("кадров") >= 0 || tmp.IndexOf("рекрутер") >= 0 || tmp.IndexOf("hr") >= 0;
-        bool is_Leader = tmp.IndexOf("начальник") >= 0 || tmp.IndexOf("руководитель") >= 0;
+        bool is_Leader = tmp.IndexOf("начальник") >= 0 || tmp.IndexOf("руководитель") >= 0 || tmp.IndexOf("директор") >= 0 || tmp.IndexOf("ceo") >= 0;
         bool is_Seller = tmp.IndexOf("отдела продаж") >= 0 || tmp.IndexOf("продавец") >= 0;
         bool is_Oper = tmp.IndexOf("оператор") >= 0 || tmp.IndexOf("call-") >= 0;
+        bool is_Market = tmp.IndexOf("маркетолог") >= 0 || tmp.IndexOf("маркетинг") >= 0;
 
         Grade = is_Junior ? "Джун" : (is_Middle ? "Средний" : (is_Senior ? "Синьор" : (is_Lead ? "Тимлид" : is_FullStack ? "Мастер" :  (is_DevOps ? "Devops" : (is_QA ? "Тестировщик" : "Специалист")))));
         Grade = is_Buh ? "бухгалтер" : Grade;
@@ -384,9 +390,35 @@ public class Proffi
         Grade = is_Seller ? "продавец" : Grade;
         Grade = is_Oper ? "оператор" : Grade;
         Grade = is_HR ? "HR" : Grade;
+        Grade = is_Market ? "Маркетолог" : Grade;
+
+        bool is_Java = tmp.IndexOf("java ") >= 0 || tmp.IndexOf("kotlin") >= 0;
+        Grade = is_Java ?  Grade +" / java" : Grade;
+
+        bool is_Javascript = tmp.IndexOf("javascript") >= 0 || tmp.IndexOf("typescript") >= 0 || tmp.IndexOf("vue") >= 0 || tmp.IndexOf(".js") >= 0 || tmp.IndexOf("react") >= 0 || tmp.IndexOf("angular") >= 0;
+        Grade = is_Javascript ? Grade + " / javascript" : Grade;
+
+        bool is_Cpp = tmp.IndexOf("cpp") >= 0 || tmp.IndexOf("c++") >= 0;
+        Grade = is_Cpp ? Grade + " / C++" : Grade;
+
+
+        bool is_CS = tmp.IndexOf("c#") >= 0 || tmp.IndexOf(".net") >= 0;
+        Grade = is_CS ? Grade + " / C#" : Grade;
+
+        bool is_SQL = tmp.IndexOf("sql") >= 0 ||  tmp.IndexOf("pl/") >= 0;
+        Grade = is_SQL ? Grade + " / SQL" : Grade;
+
+        bool is_pascal = tmp.IndexOf("delphi") >= 0 || tmp.IndexOf("pascal") >= 0;
+        Grade = is_pascal ? Grade + " / Pascal" : Grade;
+
+        bool is_PHP = tmp.IndexOf("php") >= 0 ;
+        Grade = is_PHP ? Grade + " / PHP" : Grade;
+
+        bool is_Python = tmp.IndexOf("python") >= 0;
+        Grade = is_Python ? Grade + " / Python" : Grade;
 
     }
-    
+
 }
 
 class Site    :IDisposable
