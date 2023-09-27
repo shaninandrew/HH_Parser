@@ -47,11 +47,9 @@ if (MyArgs.Count > 0)
 
 }
 
-
-
 ParseHH parser = new ParseHH(cfg.Target,1, cfg.MaxList, cfg.Pause);
 
-System.IO.File.WriteAllText(cfg.OutFile, "Name;Salary min;Salary max;Link;Grade;Skills;Address\r\n");
+System.IO.File.WriteAllText(cfg.OutFile, "Name;Salary min;Salary max;Link;Grade;Skills;Address;Language\r\n");
 
 Thread.Sleep(1000);
 lock (parser)
@@ -59,7 +57,7 @@ lock (parser)
     foreach (Proffi proffi in parser.proffi_list)
     {
         Console.WriteLine($" {proffi.Name_Formatted,-50} │ {proffi.GetMin,7} - {proffi.GetMax,7} │  {proffi.Grade,13}│ {proffi.LinkHref} │ {proffi.Skills,-30}");
-        System.IO.File.AppendAllText(cfg.OutFile, $"{proffi.Name};{proffi.GetMin};{proffi.GetMax};{proffi.LinkHref};{proffi.Grade};{proffi.Skills};{proffi.Address}\r\n");
+        System.IO.File.AppendAllText(cfg.OutFile, $"{proffi.Name};{proffi.GetMin};{proffi.GetMax};{proffi.LinkHref};{proffi.Grade};{proffi.Skills};{proffi.Address};{proffi.Language} \r\n");
 
     }
 }
@@ -95,8 +93,6 @@ public class ParseHH
 
         Console.Write("Закачка: ");
 
-        const int ERROR = -1;
-        const int OK = 1;
 
         for (int ix = min_page; ix < max_page; ix++)
         {
@@ -132,7 +128,7 @@ public class ParseHH
 
                     Loading++;
                     foreach (IElement item in site.GetAllClasses)
-                     {
+                    {
                          Proffi proffi = new Proffi("");
 
                          foreach (var span in item.GetElementsByTagName("span"))
@@ -177,7 +173,7 @@ public class ParseHH
 
                          proffi_list.Add(proffi);
 
-                     }
+                    }
                      //чистим дубли
                      
                  }
@@ -354,6 +350,8 @@ public class Proffi
         }
 
     public string Grade { get; set; }
+    public string Language { get; set; } = "";
+
 
     public string LinkHref { get; set; }
 
@@ -394,28 +392,36 @@ public class Proffi
 
         bool is_Java = tmp.IndexOf("java ") >= 0 || tmp.IndexOf("kotlin") >= 0;
         Grade = is_Java ?  Grade +" / java" : Grade;
+        Language = is_Java ? "Java" : "";
 
         bool is_Javascript = tmp.IndexOf("javascript") >= 0 || tmp.IndexOf("typescript") >= 0 || tmp.IndexOf("vue") >= 0 || tmp.IndexOf(".js") >= 0 || tmp.IndexOf("react") >= 0 || tmp.IndexOf("angular") >= 0;
         Grade = is_Javascript ? Grade + " / javascript" : Grade;
+        Language = is_Javascript ? "Javascript" : Language;
 
         bool is_Cpp = tmp.IndexOf("cpp") >= 0 || tmp.IndexOf("c++") >= 0;
         Grade = is_Cpp ? Grade + " / C++" : Grade;
+        Language = is_Cpp ? "C++" : Language;
 
 
         bool is_CS = tmp.IndexOf("c#") >= 0 || tmp.IndexOf(".net") >= 0;
         Grade = is_CS ? Grade + " / C#" : Grade;
+        Language = is_CS ? "C#" : Language;
 
         bool is_SQL = tmp.IndexOf("sql") >= 0 ||  tmp.IndexOf("pl/") >= 0;
         Grade = is_SQL ? Grade + " / SQL" : Grade;
+        Language = is_SQL ? "SQL" : Language;
 
         bool is_pascal = tmp.IndexOf("delphi") >= 0 || tmp.IndexOf("pascal") >= 0;
         Grade = is_pascal ? Grade + " / Pascal" : Grade;
+        Language = is_pascal ? "Pascal" : Language;
 
         bool is_PHP = tmp.IndexOf("php") >= 0 ;
         Grade = is_PHP ? Grade + " / PHP" : Grade;
+        Language = is_PHP ? "PHP" : Language;
 
         bool is_Python = tmp.IndexOf("python") >= 0;
         Grade = is_Python ? Grade + " / Python" : Grade;
+        Language = is_Python ? "Python" : Language;
 
     }
 
