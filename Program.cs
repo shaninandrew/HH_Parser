@@ -18,8 +18,8 @@ System.IO.File.WriteAllText("out.csv", "Name;Salary min;Salary max;Link;Function
 
 foreach (Proffi proffi in parser.proffi_list)
 {
-    Console.WriteLine($" {proffi.Name_Formated ,-50} │ {proffi.GetMin,7} - {proffi.GetMax,7} │  {proffi.Function,13}│ {proffi.LinkHref} │ {proffi._Address,-50}");
-    System.IO.File.AppendAllText("out.csv", $"{proffi.Name};{proffi.GetMin};{proffi.GetMax};{proffi.LinkHref};{proffi.Function};{proffi._Address}\r\n");
+    Console.WriteLine($" {proffi.Name_Formatted ,-50} │ {proffi.GetMin,7} - {proffi.GetMax,7} │  {proffi.Function,13}│ {proffi.LinkHref} │ {proffi.Address,-50}");
+    System.IO.File.AppendAllText("out.csv", $"{proffi.Name};{proffi.GetMin};{proffi.GetMax};{proffi.LinkHref};{proffi.Function};{proffi.Address}\r\n");
 }
 
 
@@ -53,6 +53,9 @@ public class ParseHH
 
         Console.Write("Закачка: ");
 
+        const int ERROR = -1;
+        const int OK = 1;
+
         for (int ix = min_page; ix < max_page; ix++)
         {
             Task T = new Task(async () =>
@@ -62,12 +65,14 @@ public class ParseHH
                  Loading++;
                  using (Site site = new Site(url.Replace("*PAGE*", i.ToString()), "vacancy-serp-item-body",TimeOut))
                  {
+                    if (site == null) return ;
 
                     while (Update_AllLinks)
-                    { Thread.Sleep(20); }
+                            { Thread.Sleep(20); }
                     
                     Update_AllLinks=true;
-                    AllLinks.AddRange(site.GetAllLinks.AsParallel());
+                    if (site != null)
+                        try { AllLinks.AddRange(site.GetAllLinks.AsParallel()); } catch { return ; ; }
                     Update_AllLinks = false;
 
 
@@ -102,7 +107,7 @@ public class ParseHH
 
                          }//foreac
                           //
-                         proffi._Address = item.GetElementsByClassName("bloko-text").First().TextContent;
+                         proffi.Address = item.GetElementsByClassName("bloko-text").First().TextContent;
 
                          // g-user-content  - функции
                          //proffi._Function = item.GetElementsByClassName("g-user-content").First().TextContent;
@@ -115,17 +120,19 @@ public class ParseHH
                  }
             });
 
-            T.ContinueWith(t => { Loading--; });
+            T.ContinueWith(t => { Console.Write("x"); Loading--; });
             T.Start();
             Thread.Sleep(TimeOut);
         }
 
 
-        
+        Console.WriteLine("");
+        Console.Write("Доделываем:");
+
         do
         {
             Console.Write(".");
-            Thread.Sleep(TimeOut/2);
+            Thread.Sleep(TimeOut*2);
         } while (Loading > 1) ;
 
         AllLinks = AllLinks.Distinct().ToList();
@@ -141,13 +148,13 @@ public class ParseHH
 public class Proffi
 {
     private string _Name = "";
+    private string _Address = "";
     public string Name
     {
         get { return _Name; }
         set { _Name = value; Function_Update_by_CheckNames(value); }
     }
-
-    public string Name_Formated { get { int len = _Name.Length; if (len > 50) { len = 50; }  return _Name.Substring(0, len); } }
+    public string Name_Formatted { get { int len = _Name.Length; if (len > 50) { len = 50; }  return _Name.Substring(0, len); } }
 
     private string _Min_Salary = "";
     private string _Max_Salary = "";
@@ -172,7 +179,9 @@ public class Proffi
                 } 
         }
 
-    public string _Address { get; set; }
+    public string Address 
+        {   get { return _Address;  }
+            set { _Address = value; } }
 
     public string Function { get; set; }
 
@@ -180,12 +189,12 @@ public class Proffi
 
     public Proffi(string Name)
     {
-    
+       _Name=Name;
     }
 
     public void Function_Update_by_CheckNames(string Name)
     {
-        Name = Name;
+        _Name = Name;
         string tmp = Name.ToLower();
 
         bool is_FullStack = tmp.IndexOf("full stack") > 0;
@@ -280,8 +289,8 @@ class Site    :IDisposable
     public void Dispose()
     {
         try {
-            _linx.Clear();
-            _classes.Clear();
+            if( _linx != null ) _linx.Clear();
+            if (_classes != null)  _classes.Clear();
         }
         finally 
         { 
