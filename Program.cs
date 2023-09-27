@@ -391,36 +391,35 @@ public class Proffi
         Grade = is_Market ? "Маркетолог" : Grade;
 
         bool is_Java = tmp.IndexOf("java ") >= 0 || tmp.IndexOf("kotlin") >= 0;
-        Grade = is_Java ?  Grade +" / java" : Grade;
+        
         Language = is_Java ? "Java" : "";
 
         bool is_Javascript = tmp.IndexOf("javascript") >= 0 || tmp.IndexOf("typescript") >= 0 || tmp.IndexOf("vue") >= 0 || tmp.IndexOf(".js") >= 0 || tmp.IndexOf("react") >= 0 || tmp.IndexOf("angular") >= 0;
-        Grade = is_Javascript ? Grade + " / javascript" : Grade;
+        
         Language = is_Javascript ? "Javascript" : Language;
 
         bool is_Cpp = tmp.IndexOf("cpp") >= 0 || tmp.IndexOf("c++") >= 0;
-        Grade = is_Cpp ? Grade + " / C++" : Grade;
+        
         Language = is_Cpp ? "C++" : Language;
 
-
         bool is_CS = tmp.IndexOf("c#") >= 0 || tmp.IndexOf(".net") >= 0;
-        Grade = is_CS ? Grade + " / C#" : Grade;
+        
         Language = is_CS ? "C#" : Language;
 
         bool is_SQL = tmp.IndexOf("sql") >= 0 ||  tmp.IndexOf("pl/") >= 0;
-        Grade = is_SQL ? Grade + " / SQL" : Grade;
+        
         Language = is_SQL ? "SQL" : Language;
 
         bool is_pascal = tmp.IndexOf("delphi") >= 0 || tmp.IndexOf("pascal") >= 0;
-        Grade = is_pascal ? Grade + " / Pascal" : Grade;
+        
         Language = is_pascal ? "Pascal" : Language;
 
         bool is_PHP = tmp.IndexOf("php") >= 0 ;
-        Grade = is_PHP ? Grade + " / PHP" : Grade;
+        
         Language = is_PHP ? "PHP" : Language;
 
         bool is_Python = tmp.IndexOf("python") >= 0;
-        Grade = is_Python ? Grade + " / Python" : Grade;
+        
         Language = is_Python ? "Python" : Language;
 
     }
