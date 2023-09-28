@@ -209,7 +209,7 @@ public class ParseHH
             {
                 if (t.IsCompleted) 
                 { 
-                    
+
                     if (t.Result != null)
                     {
                        
@@ -218,21 +218,11 @@ public class ParseHH
                             active--;
                             proffi_list.AddRange(t.Result);
                             delete.Add(t.Id);
-                            break;
+                            
                         }
                     }
                 };
-                if (t.Status == TaskStatus.RanToCompletion) 
-                { 
-                    //active--;
-                    //proffi_list.AddRange(t.Result);
-                    //t.Dispose();
-
-                };
-                //   if (t.IsFaulted) { active--; };
-                //  if (t.IsCanceled) { active--; };
-                // if (t.Result !=null) { active--; }
-                //if (done == false) { break; }
+   
             }
 
             try
@@ -240,8 +230,9 @@ public class ParseHH
                 foreach (int del in delete)
                 {
                     tasks.Remove( tasks.Where(i => i.Id == del).First());
-                    GC.Collect();
+                   
                 }
+                GC.Collect();
             }
             catch { }
 
@@ -251,7 +242,7 @@ public class ParseHH
             Thread.Sleep(100);
 
            
-        } while (active>0) ;
+        } while ((active>0) && (tasks.Count>0)) ;
         
         end_ = DateTime.Now;
         TimeSpan step2 = TimeSpan.FromTicks(end_.Ticks - start.Ticks);
