@@ -5,12 +5,14 @@ using AngleSharp.Html;
 using AngleSharp.Io;
 using ScanHH;
 using System;
+using System.Data;
 using System.Diagnostics;
 using System.Reflection.Metadata;
 using System.Text;
 using System.Text.Json;
 using System.Threading;
 using static System.Net.WebRequestMethods;
+using static System.Runtime.InteropServices.JavaScript.JSType;
 
 Console.OutputEncoding = Encoding.UTF8;
 Console.WriteLine("Закачка данных...");
@@ -96,106 +98,148 @@ public class ParseHH
 
         Console.Write("Закачка: ");
 
+        List < Task< List<Proffi>> > tasks = new List <Task<List<Proffi>>>();
+        
 
         for (int ix = min_page; ix < max_page; ix++)
         {
-            Task T = new Task(async () =>
-            {
+           // Task T = new Task(async () =>
+          //  {
                 int i = ix;
+                Console.Write("*");
 
-                 
-                 using (Site site = new Site(url.Replace("*PAGE*", i.ToString()), "vacancy-serp-item-body",null,TimeOut))
-                 {
-                    if (site == null)
-                    {
-                        
-                        return;
-                    }
-
-                    while (Update_AllLinks)
-                            { Thread.Sleep(20); }
-                    
-                    Update_AllLinks=true;
-                    if (site != null)
-                        try { AllLinks.AddRange(site.GetAllLinks.AsParallel()); } catch {  return; }
-                    Update_AllLinks = false;
-
-
-
-                    /* foreach (var link in site.GetAllLinks)
+                Task <List<Proffi>> task = new Task<List<Proffi>>(() => 
+                { 
+                     using (Site site = new Site(url.Replace("*PAGE*", i.ToString()), "vacancy-serp-item-body",null,TimeOut))
                      {
-                         Console.WriteLine($" {link.TextContent}-> {link.Attributes["href"].Value}");
-                     }    */
+                        List<Proffi> proffies = null; 
 
-                    //ФИльтр
-
-                    Loading++;
-                    foreach (IElement item in site.GetAllClasses)
-                    {
-                         Proffi proffi = new Proffi("");
-
-                         foreach (var span in item.GetElementsByTagName("span"))
-                         {
-                            // serp-item__title - Name 
-                            // bloko-header-section-2  - ЗП
-                            if (span.ClassName == null)
-                            {
-                                proffi.Name = span.TextContent;
-                                try 
-                                { 
-                                    proffi.LinkHref = span.ChildNodes.GetElementsByTagName("a").First().GetAttribute("href").ToString();
-                                    proffi.LinkHref = proffi.LinkHref.Substring(0, proffi.LinkHref.IndexOf("?"));
-                                } catch { }
-                            }
-                             if (span.ClassName == "bloko-header-section-2")
-                                 proffi._Salary = span.TextContent.ToLower().Replace(" ", "").Replace("от", "").Replace("до", "").Replace("?", "");
-
-                         }//foreac
-                          //
-                         proffi.Address = item.GetElementsByClassName("bloko-text").First().TextContent;
-
-                        // g-user-content  - функции
-                        //proffi._Function = item.GetElementsByClassName("g-user-content").First().TextContent;
-
-                        if (proffi.LinkHref != "")
+                        if (site == null)
                         {
-                            //дергаем списки        навыков
-    
-                            Site sub =new Site(proffi.LinkHref, "bloko-tag_inline", null,TimeOut);
-                            proffi.Skills = "";
-                            //защита от косяка
-                            try
-                            {
-                                foreach (Element e in sub.GetAllClasses)
-                                {
-                                    proffi.Skills +=  e.TextContent.Trim() + "//";
-                                }
-                            }
-                            catch { }
+                            return (null);
                         }
 
-                         proffi_list.Add(proffi);
+                      
 
-                    }
-                     //чистим дубли
-                     
-                 }
-            });
+                        //Loading++;
+                        proffies = new List<Proffi>();
+                        
+                        foreach (IElement item in site.GetAllClasses)
+                        {
+                             Proffi proffi = new Proffi("");
+                            
 
-            T.ContinueWith(t => { Console.Write("x"); Loading--; });
-            T.Start();
-            Thread.Sleep(TimeOut);
+                             foreach (var span in item.GetElementsByTagName("span"))
+                             {
+                                // serp-item__title - Name 
+                                // bloko-header-section-2  - ЗП
+                                if (span.ClassName == null)
+                                {
+                                    proffi.Name = span.TextContent;
+                                    try 
+                                    { 
+                                        proffi.LinkHref = span.ChildNodes.GetElementsByTagName("a").First().GetAttribute("href").ToString();
+                                        proffi.LinkHref = proffi.LinkHref.Substring(0, proffi.LinkHref.IndexOf("?"));
+                                    } catch { }
+                                }
+                                 if (span.ClassName == "bloko-header-section-2")
+                                     proffi._Salary = span.TextContent.ToLower().Replace(" ", "").Replace("от", "").Replace("до", "").Replace("?", "");
+
+                             }//foreac
+                              //
+                             proffi.Address = item.GetElementsByClassName("bloko-text").First().TextContent;
+
+                            // g-user-content  - функции
+                            //proffi._Function = item.GetElementsByClassName("g-user-content").First().TextContent;
+
+                            if (proffi.LinkHref != "")
+                            {
+                                //дергаем списки        навыков
+    
+                                Site sub =new Site(proffi.LinkHref, "bloko-tag_inline", null,TimeOut);
+                                proffi.Skills = "";
+                                //защита от косяка
+                                try
+                                {
+                                    foreach (Element e in sub.GetAllClasses)
+                                    {
+                                        proffi.Skills +=  e.TextContent.Trim() + "//";
+                                    }
+                                }
+                                catch { }
+                            }
+
+                                //возврат значения
+
+                            proffies.Add(proffi);
+                            
+                        }
+                        //чистим дубли
+
+                        // if (proffies !=null)
+                       //     Console.Write  ($"                                  * скачено: {proffies.Count} вакансий \r");
+                       //AllLinks
+                      
+                      return proffies;
+                     }
+                });
+            
+
+
+                task.Start();
+                tasks.Add(task);
+                Thread.Sleep(TimeOut/2);
+
+
+
+            // T.ContinueWith(t => { Console.Write("x"); Loading--; });
+            // T.Start();
+            // Thread.Sleep(TimeOut);
         }
 
-
+       
         Console.WriteLine("");
-        Console.Write("Доделываем:");
+       
 
+        //все закончили
+        bool done = true;
+
+        //мониторим
+        int active = 0;
         do
         {
-            Console.Write(".");
-            Thread.Sleep(TimeOut*2);
-        } while (Loading > 1) ;
+            done = true;
+            active = tasks.Count;
+            foreach (Task<List<Proffi>> t in tasks)
+            {
+               if (t.IsCompleted) { active--; };
+                if (t.Status == TaskStatus.RanToCompletion) { active--; };
+             //   if (t.IsFaulted) { active--; };
+             //  if (t.IsCanceled) { active--; };
+               // if (t.Result !=null) { active--; }
+                //if (done == false) { break; }
+            }
+
+            Console.Write($"Ожидаем завершения ... {active} из {tasks.Count} \r");
+            // Console.Write(".");
+            //Task.Delay(1000);
+            Thread.Sleep(100);
+
+           
+        } while (active>0) ;
+
+
+        Console.Write("Собираем данные ...");
+        foreach (Task<List<Proffi>> t in tasks)
+        {
+            if (t.Result != null)
+            {
+                proffi_list.AddRange(t.Result.ToArray());
+                AllLinks.AddRange( t.Result.)
+            
+            }
+      
+        }
 
         AllLinks = AllLinks.Distinct().ToList();
         proffi_list = proffi_list.Distinct().ToList();
@@ -429,7 +473,7 @@ public class Proffi
 
 }
 
-class Site    :IDisposable
+class Site   :IDisposable
 {
     /// <summary>
     /// Ссылки для обхода сайта
@@ -452,54 +496,75 @@ class Site    :IDisposable
     private List<IElement> _tags = null;
     public List<IElement> GetAllTags { get { return _tags; } }
 
-    public Site(string url , string? get_data_by_class, string? get_data_by_tags, int TimeOut=300) 
-    {
 
+    private async  Task<StringBuilder> Load(string url, int TimeOut)
+    {
         HttpClient http = new HttpClient();
         http.BaseAddress = new Uri(url);
-        string data = "";
-
         bool tries = false;
         int retries = 0;
-        do {
+
+        StringBuilder data = new StringBuilder(2048);
+
+        do
+        {
             try
             {
-                data =  http.GetStringAsync(new Uri(url)).Result;
+                data.Append( await http.GetStringAsync(new Uri(url)));
             }
             catch (Exception ex)
             {
                 Debug.WriteLine(ex.Message);
                 tries = true;
                 retries++;
-                Thread.Sleep(TimeOut);
+                Task.Delay(TimeOut);
             }
 
 
             if (retries > 10)
-            { 
+            {
                 tries = true;
-                Thread.Sleep(TimeOut);
+                Task.Delay(TimeOut*2);
             }
-            
+
             if (retries > 20)
             {
-                return;
+                break;
             }
 
-        } while (tries) ;
+        } while (tries);
+
+        http.Dispose();
+        return data;
+
+    }
+
+    public Site(string url , string? get_data_by_class, string? get_data_by_tags, int TimeOut=300) 
+    {
+
+
+        StringBuilder data = null;
+
+        Task<StringBuilder> t= Load(url, TimeOut);
+        t.Wait(TimeOut*5);
+
+        //не получилось ну фиг с ним
+        if ( t.IsFaulted ) { return; }
+        data = t.Result;
+          
 
         //Защита от слепков
-        data = data.Replace("/><", "/> <");
-        data = data.Replace("><", "> <");
-        data = data.Replace("₽", "р");
-        data = data.Replace("\u000A", " ");
-        data = data.Replace("\r", " ");
-        data = data.Replace("\n", " ");
-        data = data.Replace("\t", " ");
+         data.Replace("/><", "/> <");
+         data.Replace("><", "> <");
+         data.Replace("₽", "р");
+         data.Replace("\u000A", " ");
+         data.Replace("\r", " ");
+         data.Replace("\n", " ");
+         data.Replace("\t", " ");
 
 
         AngleSharp.Html.Parser.HtmlParser parser = new AngleSharp.Html.Parser.HtmlParser();
-        var doc = parser.ParseDocument(data);
+        var doc = parser.ParseDocument(data.ToString());
 
        _linx = doc.Links.Where(i => i != null).ToList();
 
