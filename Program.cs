@@ -239,7 +239,7 @@ public class ParseHH
             {
                 foreach (int del in delete)
                 {
-                    tasks.RemoveAt(del);
+                    tasks.Remove( tasks.Where(i => i.Id == del).First());
                     GC.Collect();
                 }
             }
