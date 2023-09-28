@@ -161,14 +161,14 @@ public class ParseHH
                         {
                             //дергаем списки        навыков
     
-                            Site sub =new Site(proffi.LinkHref, "bloko-tag-list",null,TimeOut);
+                            Site sub =new Site(proffi.LinkHref, "bloko-tag_inline", null,TimeOut);
                             proffi.Skills = "";
                             //защита от косяка
                             try
                             {
                                 foreach (Element e in sub.GetAllClasses)
                                 {
-                                    proffi.Skills += e.TextContent + " // ";
+                                    proffi.Skills +=  e.TextContent.Trim() + "//";
                                 }
                             }
                             catch { }
