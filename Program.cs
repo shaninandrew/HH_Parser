@@ -93,7 +93,7 @@ public class ParseHH
 
      
         Console.Write("Закачка: ");
-        List < Task<Proffi[]> > tasks = new List<Task<Proffi[]>>();
+        Task<Proffi[]> [] tasks = new  Task<Proffi[]>[max_page - min_page];
 
         DateTime start = DateTime.Now;
 
@@ -101,7 +101,7 @@ public class ParseHH
         {
            // Task T = new Task(async () =>
           //  {
-                int i = ix;
+                int i = ix-min_page;
                 Console.Write("*");
 
                 //  Создаем задачу 
@@ -178,8 +178,7 @@ public class ParseHH
                 });
             
                 task.Start();
-                //task.Wait( ix*2+10);
-                tasks.Add(task);
+                tasks[i]  = task;
           
         }
 
@@ -196,16 +195,29 @@ public class ParseHH
         proffi_list = new List<Proffi>();
         proffi_list.Clear();
 
+        
         //мониторим
-        int active = 0;
+        int  active = tasks.Length;
         do
         {
             done = true;
-            active = tasks.Count;
-            List<int> delete = new List<int>();
-            delete.Clear();
 
-            foreach (Task<Proffi[]> t in tasks)
+            // List<int> delete = new List<int>();
+            // delete.Clear();
+
+            Console.Write($"Ожидаем завершения ... {active} из {tasks.Length} \r");
+            int ended_index = Task.WaitAny(tasks);
+            if (ended_index != null)
+            {
+                active--;
+                var t = tasks[ended_index];
+                proffi_list.AddRange(t.Result);
+                proffi_list = proffi_list.Distinct().ToList();  
+
+            }
+
+            /*
+             * foreach (Task<Proffi[]> t in tasks)
             {
                 if (t.IsCompleted) 
                 { 
@@ -223,27 +235,29 @@ public class ParseHH
                     }
                 };
    
-            }
+            }    */
 
-            try
-            {
-                foreach (int del in delete)
-                {
-                    tasks.Remove( tasks.Where(i => i.Id == del).First());
-                   
-                }
-                GC.Collect();
-            }
-            catch { }
+            /* try
+             {
+                 foreach (int del in delete)
+                 {
+                     tasks.Remove( tasks.Where(i => i.Id == del).First());
 
-            Console.Write($"Ожидаем завершения ... {active} из {tasks.Count} \r");
+                 }
+                 GC.Collect();
+             }
+             catch { }
+              */
+
+            
             // Console.Write(".");
             //Task.Delay(1000);
-            Thread.Sleep(100);
+            //Thread.Sleep(100);
 
-           
-        } while ((active>0) && (tasks.Count>0)) ;
-        
+
+        } while (active > 0); //((active>0) && (tasks.Length>0)) ;
+
+
         end_ = DateTime.Now;
         TimeSpan step2 = TimeSpan.FromTicks(end_.Ticks - start.Ticks);
         GC.Collect();
@@ -289,7 +303,7 @@ public class ParseHH
 
         }     
       */  
-        tasks.Clear();
+        // tasks.Clear();
         Console.Write(" сортируем... ");
 
 
