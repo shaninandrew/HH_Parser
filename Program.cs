@@ -35,7 +35,10 @@ var MyArgs = args.ToList();
 Config cfg = new Config();
 cfg.Target = test_url;
 
-string sample_cfg = JsonSerializer.Serialize(cfg);
+JsonSerializerOptions options = new JsonSerializerOptions();
+options.WriteIndented = true;
+
+string sample_cfg = JsonSerializer.Serialize(cfg, options   );
 System.IO.File.WriteAllText("sample_cfg.json", sample_cfg);  
 
 
@@ -51,7 +54,7 @@ ParseHH parser = new ParseHH(cfg.Target,1, cfg.MaxList, cfg.Pause);
 
 System.IO.File.WriteAllText(cfg.OutFile, "Name;Salary min;Salary max;Link;Grade;Skills;Address;Language\r\n");
 
-Thread.Sleep(1000);
+Thread.Sleep(cfg.Pause*3);
 lock (parser)
 {
     foreach (Proffi proffi in parser.proffi_list)
