@@ -108,6 +108,7 @@ public class ParseHH
                 int i = ix;
                 Console.Write("*");
 
+                //  Создаем задачу 
                 Task <List<Proffi>> task = new Task<List<Proffi>>(() => 
                 { 
                      using (Site site = new Site(url.Replace("*PAGE*", i.ToString()), "vacancy-serp-item-body",null,TimeOut))
@@ -119,9 +120,8 @@ public class ParseHH
                             return (null);
                         }
 
-                      
-
-                        //Loading++;
+                        
+                        //Обработка данных...
                         proffies = new List<Proffi>();
                         
                         foreach (IElement item in site.GetAllClasses)
@@ -169,18 +169,20 @@ public class ParseHH
                                 catch { }
                             }
 
-                                //возврат значения
+                           //возврат значения
 
                             proffies.Add(proffi);
                             
                         }
                         //чистим дубли
+                        if (proffies != null)
+                            proffies = proffies.Distinct().ToList();
 
                         // if (proffies !=null)
-                       //     Console.Write  ($"                                  * скачено: {proffies.Count} вакансий \r");
-                       //AllLinks
-                      
-                      return proffies;
+                        //     Console.Write  ($"                                  * скачено: {proffies.Count} вакансий \r");
+                        //AllLinks
+
+                        return proffies;
                      }
                 });
             
@@ -212,11 +214,11 @@ public class ParseHH
             active = tasks.Count;
             foreach (Task<List<Proffi>> t in tasks)
             {
-               if (t.IsCompleted) { active--; };
+                if (t.IsCompleted) { active--; };
                 if (t.Status == TaskStatus.RanToCompletion) { active--; };
-             //   if (t.IsFaulted) { active--; };
-             //  if (t.IsCanceled) { active--; };
-               // if (t.Result !=null) { active--; }
+                //   if (t.IsFaulted) { active--; };
+                //  if (t.IsCanceled) { active--; };
+                // if (t.Result !=null) { active--; }
                 //if (done == false) { break; }
             }
 
@@ -229,19 +231,38 @@ public class ParseHH
         } while (active>0) ;
 
 
-        Console.Write("Собираем данные ...");
-        foreach (Task<List<Proffi>> t in tasks)
-        {
-            if (t.Result != null)
-            {
-                proffi_list.AddRange(t.Result.ToArray());
-                AllLinks.AddRange( t.Result.)
-            
-            }
-      
-        }
+        Thread.Sleep(100);
 
-        AllLinks = AllLinks.Distinct().ToList();
+        Console.WriteLine();
+        proffi_list.Clear();
+
+        Console.Write("Собираем данные ...");
+        lock (tasks)
+        for (int i = 0; i < tasks.Count; i++)
+        {
+
+            Task<List<Proffi>> t = tasks[i];
+            Console.Write("▓");
+
+            try
+            {
+
+                if (t == null) continue;
+                if (t.Result == null) continue;
+                if (t.Result.Count == 0) continue;
+                proffi_list.AddRange(t.Result.ToArray());
+            }
+            catch  (Exception ex)
+            {
+                    Debug.Write(ex.Message);
+            }
+
+        }
+        tasks.Clear();
+        Console.Write(" сортируем... ");
+
+
+        //AllLinks = AllLinks.Distinct().ToList();
         proffi_list = proffi_list.Distinct().ToList();
 
         //сортировака по типам должности
