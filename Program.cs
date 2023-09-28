@@ -90,16 +90,13 @@ public class ParseHH
     {
         TimeOut = pause;
         AllLinks = new List<IElement>();
-        proffi_list = new List<Proffi>();
+       
 
-        bool Update_AllLinks = false;
-
-        int Loading = 0;
-
+     
         Console.Write("Закачка: ");
-
         List < Task< List<Proffi>> > tasks = new List <Task<List<Proffi>>>();
-        
+
+        DateTime start = DateTime.Now;
 
         for (int ix = min_page; ix < max_page; ix++)
         {
@@ -175,8 +172,8 @@ public class ParseHH
                             
                         }
                         //чистим дубли
-                        if (proffies != null)
-                            proffies = proffies.Distinct().ToList();
+                        //if (proffies != null)
+                        //    proffies = proffies.Distinct().ToList();
 
                         // if (proffies !=null)
                         //     Console.Write  ($"                                  * скачено: {proffies.Count} вакансий \r");
@@ -186,22 +183,18 @@ public class ParseHH
                      }
                 });
             
-
-
                 task.Start();
+                //task.Wait( ix*2+10);
                 tasks.Add(task);
-                Thread.Sleep(TimeOut/2);
-
-
-
-            // T.ContinueWith(t => { Console.Write("x"); Loading--; });
-            // T.Start();
-            // Thread.Sleep(TimeOut);
+          
         }
 
-       
+        DateTime end_ = DateTime.Now;
+        TimeSpan starting = TimeSpan.FromTicks(end_.Ticks - start.Ticks);
+
         Console.WriteLine("");
-       
+        Console.WriteLine($"Запуск  {starting.Milliseconds} мс ");
+
 
         //все закончили
         bool done = true;
@@ -229,21 +222,29 @@ public class ParseHH
 
            
         } while (active>0) ;
+        
+        end_ = DateTime.Now;
+        TimeSpan step2 = TimeSpan.FromTicks(end_.Ticks - start.Ticks);
 
-
-        Thread.Sleep(100);
-
+        Console.WriteLine("");
+        Console.WriteLine($"Окончательная обработка {step2.Milliseconds} мс ");
         Console.WriteLine();
         proffi_list.Clear();
 
         Console.Write("Собираем данные ...");
-        lock (tasks)
+        Console.WriteLine("");
+
+        proffi_list = new List<Proffi>();
+        proffi_list.Clear();
+        
         for (int i = 0; i < tasks.Count; i++)
         {
 
+            start = DateTime.Now;
             Task<List<Proffi>> t = tasks[i];
             Console.Write("▓");
 
+            // lock(t)
             try
             {
 
@@ -252,10 +253,18 @@ public class ParseHH
                 if (t.Result.Count == 0) continue;
                 proffi_list.AddRange(t.Result.ToArray());
             }
-            catch  (Exception ex)
+            catch (Exception ex)
             {
-                    Debug.Write(ex.Message);
+                Debug.Write(ex.Message);
+                Console.WriteLine(" > " + ex.Message);
             }
+            finally
+            {
+                    end_ = DateTime.Now;    
+            }
+            
+            TimeSpan step3 = TimeSpan.FromTicks(end_.Ticks - start.Ticks);
+            Console.WriteLine($"Копирка  - {step3.TotalMilliseconds}");
 
         }
         tasks.Clear();
@@ -302,7 +311,9 @@ public class Proffi
     public string Name
     {
         get { return _Name; }
-        set { _Name = value.Replace(";"," ").Replace("\r\n"," "); Function_Update_by_CheckNames(value); }
+        set { 
+            _Name = value.Replace(";"," ").Replace("\r\n"," "); 
+            Function_Update_by_CheckNames(_Name); }
     }
     public string Name_Formatted { get { int len = _Name.Length; if (len > 50) { len = 50; }  return _Name.Substring(0, len); } }
 
@@ -525,7 +536,7 @@ class Site   :IDisposable
         bool tries = false;
         int retries = 0;
 
-        StringBuilder data = new StringBuilder(2048);
+        StringBuilder data = new StringBuilder("");
 
         do
         {
@@ -567,7 +578,7 @@ class Site   :IDisposable
         StringBuilder data = null;
 
         Task<StringBuilder> t= Load(url, TimeOut);
-        t.Wait(TimeOut*5);
+        t.Wait(TimeOut);
 
         //не получилось ну фиг с ним
         if ( t.IsFaulted ) { return; }
