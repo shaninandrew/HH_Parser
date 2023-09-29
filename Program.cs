@@ -58,14 +58,14 @@ ParseHH parser = new ParseHH(cfg.Target,1, cfg.MaxList, cfg.Pause);
 System.IO.File.WriteAllText(cfg.OutFile, "Name;Salary min;Salary max;Link;Grade;Skills;Address;Language\r\n");
 
 Thread.Sleep(1000);
-lock (parser)
-{
+
+
     foreach (Proffi proffi in parser.proffi_list_all)
     {
         Console.WriteLine($" {proffi.Name_Formatted,-50} │ {proffi.GetMin,7} - {proffi.GetMax,7} │  {proffi.Grade,13}│ {proffi.LinkHref} │ {proffi.Skills,-30}");
         System.IO.File.AppendAllText(cfg.OutFile, $"{proffi.Name};{proffi.GetMin};{proffi.GetMax};{proffi.LinkHref};{proffi.Grade};{proffi.Skills};{proffi.Address};{proffi.Language} \r\n");
 
-}
+    }
 
 
 
@@ -100,6 +100,8 @@ public class ParseHH
         Task<Proffi[]> [] tasks = new  Task<Proffi[]>[max_page - min_page];
 
         //Запуск задач
+
+        int Loading = 0;
 
         for (int ix = min_page; ix < max_page; ix++)
         {
