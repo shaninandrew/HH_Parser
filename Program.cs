@@ -7,6 +7,7 @@ using ScanHH;
 using System;
 using System.Data;
 using System.Diagnostics;
+using System.Linq;
 using System.Reflection.Metadata;
 using System.Runtime.CompilerServices;
 using System.Text;
@@ -106,16 +107,18 @@ public class ParseHH
         for (int ix = min_page; ix < max_page; ix++)
         {
             Loading++;
+            Console.Write("-");
             Task<Proffi[]> T = ProcessPage(url, ix);
 
             T.ContinueWith(t => 
                 { 
-                  Console.Write("x"); 
-                  Loading--; 
-                  proffi_list_all.AddRange(T.Result); 
+                    Console.Write("x"); 
+                    Loading--; 
+                    proffi_list_all.AddRange(T.Result);
+                    proffi_list_all = proffi_list_all.Distinct().ToList();
+                    GC.Collect();
                 });
 
-         
         }
 
         Console.WriteLine("");
@@ -125,6 +128,7 @@ public class ParseHH
         {
             Console.Write(".");
             Thread.Sleep(TimeOut*2);
+            GC.Collect();
         } while (Loading > 1) ;
 
         AllLinks = AllLinks.Distinct().ToList();
@@ -132,10 +136,7 @@ public class ParseHH
 
         //сортировака по типам должности
         proffi_list_all.Sort(CompareProffies);
-
         Console.WriteLine(" готово!");
-
-
 
     } //ParseHH
 
@@ -145,6 +146,12 @@ public class ParseHH
     }
 
 
+    /// <summary>
+    /// Обработка страницы 
+    /// </summary>
+    /// <param name="url"></param>
+    /// <param name="page_index"></param>
+    /// <returns></returns>
     async Task<Proffi[]> ProcessPage(string url ,int page_index )
     {
         int i = page_index;
@@ -157,17 +164,7 @@ public class ParseHH
                 return (null);
             }
 
-
-            /* foreach (var link in site.GetAllLinks)
-             {
-                 Console.WriteLine($" {link.TextContent}-> {link.Attributes["href"].Value}");
-             }    */
-
-            //ФИльтр
-
             //Лоакльный список
-
-
             proffi_list = new List<Proffi>();
             foreach (IElement item in site.GetAllClasses)
             {
@@ -221,12 +218,16 @@ public class ParseHH
             //чистим дубли
             
         } //using
-        return proffi_list.ToArray();
+        
+        return proffi_list.Distinct().ToArray(); 
     }
 
 }
 
 
+/// <summary>
+/// Структура данных Профи
+/// </summary>
 
 public class Proffi
 {
@@ -350,19 +351,20 @@ public class Proffi
 
                             }
                         }
-
             } 
         }
 
     public string Address 
-        {   get { return _Address;  }
-            set { _Address = value.Replace(";", " ").Replace("\r\n", " ");  } }
+    {   
+        get { return _Address;  }
+        set { _Address = value.Replace(";", " ").Replace("\r\n", " ");  } 
+    }
 
     public string Skills 
-        { 
-            get { return _Skills; } 
-            set { _Skills = value.Replace(";", " ").Replace("\r\n", " "); } 
-        }
+    { 
+        get { return _Skills; } 
+        set { _Skills = value.Replace(";", " ").Replace("\r\n", " "); } 
+    }
 
     public string Grade { get; set; }
     public string Language { get; set; } = "";
