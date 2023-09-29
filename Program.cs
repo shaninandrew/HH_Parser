@@ -257,12 +257,24 @@ public class Proffi
     public double BEL_RUB = 38;
 
 
+
     private string _Name = "";
     private string _Address = "";
     private string _Skills = "";
 
+    /// <summary>
+    /// отзыв - если зарегистрированный опрос то будет видно, обычно скрыто
+    /// </summary>
     public string Response = "";
+
+    /// <summary>
+    /// Возлагаемые обязанности. Описание вакансии
+    /// </summary>
     public string Task = "";
+    
+    /// <summary>
+    /// Название вакансии
+    /// </summary>
     public string Name
     {
         get { return _Name; }
@@ -271,14 +283,17 @@ public class Proffi
             Function_Update_by_CheckNames(_Name); }
     }
 
-
+    /// <summary>
+    /// Форматированное название
+    /// </summary>
     public string Name_Formatted { get { int len = _Name.Length; if (len > 50) { len = 50; }  return _Name.Substring(0, len); } }
+
 
     private string _Min_Salary = "";
     private string _Max_Salary = "";
 
     /// <summary>
-    /// Размер вознаграждения без единииц
+    /// Размер вознаграждения без единииц в руб
     /// </summary>
     public string GetMin { get { return _Min_Salary.Replace("р",""); } }
     public string GetMax { get { return _Max_Salary.Replace("р", "");  } }
