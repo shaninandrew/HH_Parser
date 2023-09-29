@@ -225,6 +225,7 @@ public class ParseHH
 
                 }
 
+                //выгружаем в промежзуточный кэш
                 proffi_list.Add(proffi);
 
 
@@ -233,6 +234,7 @@ public class ParseHH
             
         } //using
         
+        //отдаем кэш с аналитикой
         return proffi_list.Distinct().ToArray(); 
     }
 
