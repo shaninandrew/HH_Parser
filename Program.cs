@@ -7,6 +7,7 @@ using ScanHH;
 using System;
 using System.Diagnostics;
 using System.Reflection.Metadata;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.Json;
 using System.Threading;
@@ -54,7 +55,7 @@ System.IO.File.WriteAllText(cfg.OutFile, "Name;Salary min;Salary max;Link;Grade;
 Thread.Sleep(1000);
 lock (parser)
 {
-    foreach (Proffi proffi in parser.proffi_list)
+    foreach (Proffi proffi in parser.proffi_list_all)
     {
         Console.WriteLine($" {proffi.Name_Formatted,-50} │ {proffi.GetMin,7} - {proffi.GetMax,7} │  {proffi.Grade,13}│ {proffi.LinkHref} │ {proffi.Skills,-30}");
         System.IO.File.AppendAllText(cfg.OutFile, $"{proffi.Name};{proffi.GetMin};{proffi.GetMax};{proffi.LinkHref};{proffi.Grade};{proffi.Skills};{proffi.Address};{proffi.Language} \r\n");
@@ -70,7 +71,7 @@ lock (parser)
 public class ParseHH
 {
   
-    public List<Proffi> proffi_list = null;
+    public List<Proffi> proffi_list_all = null;
     public List <IElement> AllLinks = null;
     private int TimeOut = 300;
 
@@ -85,7 +86,7 @@ public class ParseHH
     {
         TimeOut = pause;
         AllLinks = new List<IElement>();
-        proffi_list = new List<Proffi>();
+        proffi_list_all = new List<Proffi>();
 
         bool Update_AllLinks = false;
 
@@ -93,97 +94,22 @@ public class ParseHH
 
         Console.Write("Закачка: ");
 
+        //Запуск задач
 
         for (int ix = min_page; ix < max_page; ix++)
         {
-            Task T = new Task(async () =>
-            {
-                int i = ix;
+            Loading++;
+            Task<Proffi[]> T = ProcessPage(url, ix);
 
-                 
-                 using (Site site = new Site(url.Replace("*PAGE*", i.ToString()), "vacancy-serp-item-body",null,TimeOut))
-                 {
-                    if (site == null)
-                    {
-                        
-                        return;
-                    }
+            T.ContinueWith(t => 
+                { 
+                  Console.Write("x"); 
+                  Loading--; 
+                  proffi_list_all.AddRange(T.Result); 
+                });
 
-                    while (Update_AllLinks)
-                            { Thread.Sleep(20); }
-                    
-                    Update_AllLinks=true;
-                    if (site != null)
-                        try { AllLinks.AddRange(site.GetAllLinks.AsParallel()); } catch {  return; }
-                    Update_AllLinks = false;
-
-
-
-                    /* foreach (var link in site.GetAllLinks)
-                     {
-                         Console.WriteLine($" {link.TextContent}-> {link.Attributes["href"].Value}");
-                     }    */
-
-                    //ФИльтр
-
-                    Loading++;
-                    foreach (IElement item in site.GetAllClasses)
-                    {
-                         Proffi proffi = new Proffi("");
-
-                         foreach (var span in item.GetElementsByTagName("span"))
-                         {
-                            // serp-item__title - Name 
-                            // bloko-header-section-2  - ЗП
-                            if (span.ClassName == null)
-                            {
-                                proffi.Name = span.TextContent;
-                                try 
-                                { 
-                                    proffi.LinkHref = span.ChildNodes.GetElementsByTagName("a").First().GetAttribute("href").ToString();
-                                    proffi.LinkHref = proffi.LinkHref.Substring(0, proffi.LinkHref.IndexOf("?"));
-                                } catch { }
-                            }
-                             if (span.ClassName == "bloko-header-section-2")
-                                 proffi._Salary = span.TextContent.ToLower().Replace(" ", "").Replace("от", "").Replace("до", "").Replace("?", "");
-
-                         }//foreac
-                          //
-                         proffi.Address = item.GetElementsByClassName("bloko-text").First().TextContent;
-
-                        // g-user-content  - функции
-                        //proffi._Function = item.GetElementsByClassName("g-user-content").First().TextContent;
-
-                        if (proffi.LinkHref != "")
-                        {
-                            //дергаем списки        навыков
-    
-                            Site sub =new Site(proffi.LinkHref, "bloko-tag-list",null,TimeOut);
-                            proffi.Skills = "";
-                            //защита от косяка
-                            try
-                            {
-                                foreach (Element e in sub.GetAllClasses)
-                                {
-                                    proffi.Skills += e.TextContent + " // ";
-                                }
-                            }
-                            catch { }
-                        }
-
-                         proffi_list.Add(proffi);
-
-                    }
-                     //чистим дубли
-                     
-                 }
-            });
-
-            T.ContinueWith(t => { Console.Write("x"); Loading--; });
-            T.Start();
-            Thread.Sleep(TimeOut);
+         
         }
-
 
         Console.WriteLine("");
         Console.Write("Доделываем:");
@@ -195,10 +121,10 @@ public class ParseHH
         } while (Loading > 1) ;
 
         AllLinks = AllLinks.Distinct().ToList();
-        proffi_list = proffi_list.Distinct().ToList();
+        proffi_list_all = proffi_list_all.Distinct().ToList();
 
         //сортировака по типам должности
-        proffi_list.Sort(CompareProffies);
+        proffi_list_all.Sort(CompareProffies);
 
         Console.WriteLine(" готово!");
 
@@ -209,6 +135,86 @@ public class ParseHH
     private static int CompareProffies(Proffi a, Proffi b)
     {
         return (a.Grade.CompareTo(b.Grade));
+    }
+
+
+    async Task<Proffi[]> ProcessPage(string url ,int page_index )
+    {
+        int i = page_index;
+        List<Proffi> proffi_list = null;
+
+        using (Site site = new Site(url.Replace("*PAGE*", i.ToString()), "vacancy-serp-item-body", null, TimeOut))
+        {
+            if (site == null)
+            {
+                return (null);
+            }
+
+
+            /* foreach (var link in site.GetAllLinks)
+             {
+                 Console.WriteLine($" {link.TextContent}-> {link.Attributes["href"].Value}");
+             }    */
+
+            //ФИльтр
+
+            //Лоакльный список
+
+
+            proffi_list = new List<Proffi>();
+            foreach (IElement item in site.GetAllClasses)
+            {
+                Proffi proffi = new Proffi("");
+
+                foreach (var span in item.GetElementsByTagName("span"))
+                {
+                    // serp-item__title - Name 
+                    // bloko-header-section-2  - ЗП
+                    if (span.ClassName == null)
+                    {
+                        proffi.Name = span.TextContent;
+                        try
+                        {
+                            proffi.LinkHref = span.ChildNodes.GetElementsByTagName("a").First().GetAttribute("href").ToString();
+                            proffi.LinkHref = proffi.LinkHref.Substring(0, proffi.LinkHref.IndexOf("?"));
+                        }
+                        catch { }
+                    }
+                    if (span.ClassName == "bloko-header-section-2")
+                        proffi._Salary = span.TextContent.ToLower().Replace(" ", "").Replace("от", "").Replace("до", "").Replace("?", "");
+
+                }//foreac
+                 //
+                proffi.Address = item.GetElementsByClassName("bloko-text").First().TextContent;
+
+                // g-user-content  - функции
+                //proffi._Function = item.GetElementsByClassName("g-user-content").First().TextContent;
+
+                if (proffi.LinkHref != "")
+                {
+                    //дергаем списки        навыков
+
+                    Site sub = new Site(proffi.LinkHref, "bloko-tag-list", null, TimeOut);
+                    proffi.Skills = "";
+                    //защита от косяка
+                    try
+                    {
+                        foreach (Element e in sub.GetAllClasses)
+                        {
+                            proffi.Skills += e.TextContent + " // ";
+                        }
+                    }
+                    catch { }
+                }
+
+                proffi_list.Add(proffi);
+
+
+            }     //for
+            //чистим дубли
+            
+        } //using
+        return proffi_list.ToArray();
     }
 
 }
