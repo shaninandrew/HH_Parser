@@ -214,10 +214,14 @@ public class ParseHH
                     try
                     {
                         proffi.Response = sub.GetAllTags.Where(t => t.ClassName == "vacancy-response").First().TextContent.Replace(";", "").Replace("\r\n", "");
-                        proffi.Task = sub.GetAllTags.Where(t => t.ClassName == "g-user-content").First().TextContent.Replace(";","").Replace("\r\n","") ;
-
                     }
                     catch { }
+                    try 
+                    {
+                        proffi.Task = sub.GetAllTags.Where(t => t.ClassName == "g-user-content").First().TextContent.Replace(";", "").Replace("\r\n", "");
+                    }
+                    catch { }
+
 
                 }
 
@@ -558,9 +562,13 @@ class Site   :IDisposable
             { _classes = doc.GetElementsByClassName(get_data_by_class).Where(i => i != null).ToList<IElement>(); }
 
         if (get_data_by_tags != null)
-            {
-                _tags = doc.GetElementsByTagName(get_data_by_tags).ToList();
-            }
+        {
+            _tags = doc.GetElementsByTagName(get_data_by_tags).ToList();
+        }
+        else
+        {
+            _tags = doc.All.ToList();
+        }
     }
 
     public void Dispose()
