@@ -56,7 +56,7 @@ if (MyArgs.Count > 0)
 
 ParseHH parser = new ParseHH(cfg.Target,1, cfg.MaxList, cfg.Pause);
 
-System.IO.File.WriteAllText(cfg.OutFile, "Name;Salary min;Salary max;Link;Grade;Skills;Address;Language\r\n");
+System.IO.File.WriteAllText(cfg.OutFile, "Name;Salary min;Salary max;Link;Grade;Skills;Address;Language;Response;Task\r\n");
 
 Thread.Sleep(1000);
 
@@ -64,7 +64,7 @@ Thread.Sleep(1000);
     foreach (Proffi proffi in parser.proffi_list_all)
     {
         Console.WriteLine($" {proffi.Name_Formatted,-50} │ {proffi.GetMin,7} - {proffi.GetMax,7} │  {proffi.Grade,13}│ {proffi.LinkHref} │ {proffi.Skills,-30}");
-        System.IO.File.AppendAllText(cfg.OutFile, $"{proffi.Name};{proffi.GetMin};{proffi.GetMax};{proffi.LinkHref};{proffi.Grade};{proffi.Skills};{proffi.Address};{proffi.Language} \r\n");
+        System.IO.File.AppendAllText(cfg.OutFile, $"{proffi.Name};{proffi.GetMin};{proffi.GetMax};{proffi.LinkHref};{proffi.Grade};{proffi.Skills};{proffi.Address};{proffi.Language};{proffi.Response};\"{proffi.Task}\" \r\n");
 
     }
 
@@ -209,6 +209,16 @@ public class ParseHH
                         }
                     }
                     catch { }
+
+                    //если был отклик
+                    try
+                    {
+                        proffi.Response = sub.GetAllTags.Where(t => t.ClassName == "vacancy-response").First().TextContent.Replace(";", "").Replace("\r\n", "");
+                        proffi.Task = sub.GetAllTags.Where(t => t.ClassName == "g-user-content").First().TextContent.Replace(";","").Replace("\r\n","") ;
+
+                    }
+                    catch { }
+
                 }
 
                 proffi_list.Add(proffi);
@@ -245,6 +255,8 @@ public class Proffi
     private string _Address = "";
     private string _Skills = "";
 
+    public string Response = "";
+    public string Task = "";
     public string Name
     {
         get { return _Name; }
@@ -252,6 +264,8 @@ public class Proffi
             _Name = value.Replace(";"," ").Replace("\r\n"," "); 
             Function_Update_by_CheckNames(_Name); }
     }
+
+
     public string Name_Formatted { get { int len = _Name.Length; if (len > 50) { len = 50; }  return _Name.Substring(0, len); } }
 
     private string _Min_Salary = "";
