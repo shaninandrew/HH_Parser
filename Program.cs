@@ -401,7 +401,14 @@ public class Proffi
         set { _Skills = value.Replace(";", " ").Replace("\r\n", " "); } 
     }
 
+    /// <summary>
+    /// класс должности
+    /// </summary>
     public string Grade { get; set; }
+
+    /// <summary>
+    /// Язык программирования
+    /// </summary>
     public string Language { get; set; } = "";
 
 
