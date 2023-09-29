@@ -5,6 +5,7 @@ using AngleSharp.Html;
 using AngleSharp.Io;
 using ScanHH;
 using System;
+using System.Data;
 using System.Diagnostics;
 using System.Reflection.Metadata;
 using System.Runtime.CompilerServices;
@@ -12,6 +13,7 @@ using System.Text;
 using System.Text.Json;
 using System.Threading;
 using static System.Net.WebRequestMethods;
+using static System.Runtime.InteropServices.JavaScript.JSType;
 
 Console.OutputEncoding = Encoding.UTF8;
 Console.WriteLine("Закачка данных...");
@@ -36,7 +38,10 @@ var MyArgs = args.ToList();
 Config cfg = new Config();
 cfg.Target = test_url;
 
-string sample_cfg = JsonSerializer.Serialize(cfg);
+JsonSerializerOptions options = new JsonSerializerOptions();
+options.WriteIndented = true;
+
+string sample_cfg = JsonSerializer.Serialize(cfg, options   );
 System.IO.File.WriteAllText("sample_cfg.json", sample_cfg);  
 
 
@@ -60,8 +65,8 @@ lock (parser)
         Console.WriteLine($" {proffi.Name_Formatted,-50} │ {proffi.GetMin,7} - {proffi.GetMax,7} │  {proffi.Grade,13}│ {proffi.LinkHref} │ {proffi.Skills,-30}");
         System.IO.File.AppendAllText(cfg.OutFile, $"{proffi.Name};{proffi.GetMin};{proffi.GetMax};{proffi.LinkHref};{proffi.Grade};{proffi.Skills};{proffi.Address};{proffi.Language} \r\n");
 
-    }
 }
+
 
 
 
@@ -90,9 +95,9 @@ public class ParseHH
 
         bool Update_AllLinks = false;
 
-        int Loading = 0;
-
+     
         Console.Write("Закачка: ");
+        Task<Proffi[]> [] tasks = new  Task<Proffi[]>[max_page - min_page];
 
         //Запуск задач
 
@@ -240,7 +245,9 @@ public class Proffi
     public string Name
     {
         get { return _Name; }
-        set { _Name = value.Replace(";"," ").Replace("\r\n"," "); Function_Update_by_CheckNames(value); }
+        set { 
+            _Name = value.Replace(";"," ").Replace("\r\n"," "); 
+            Function_Update_by_CheckNames(_Name); }
     }
     public string Name_Formatted { get { int len = _Name.Length; if (len > 50) { len = 50; }  return _Name.Substring(0, len); } }
 
@@ -432,7 +439,7 @@ public class Proffi
 
 }
 
-class Site    :IDisposable
+class Site   :IDisposable
 {
     /// <summary>
     /// Ссылки для обхода сайта
@@ -455,54 +462,75 @@ class Site    :IDisposable
     private List<IElement> _tags = null;
     public List<IElement> GetAllTags { get { return _tags; } }
 
-    public Site(string url , string? get_data_by_class, string? get_data_by_tags, int TimeOut=300) 
-    {
 
+    private async  Task<StringBuilder> Load(string url, int TimeOut)
+    {
         HttpClient http = new HttpClient();
         http.BaseAddress = new Uri(url);
-        string data = "";
-
         bool tries = false;
         int retries = 0;
-        do {
+
+        StringBuilder data = new StringBuilder("");
+
+        do
+        {
             try
             {
-                data =  http.GetStringAsync(new Uri(url)).Result;
+                data.Append( await http.GetStringAsync(new Uri(url)));
             }
             catch (Exception ex)
             {
                 Debug.WriteLine(ex.Message);
                 tries = true;
                 retries++;
-                Thread.Sleep(TimeOut);
+                Task.Delay(TimeOut);
             }
 
 
             if (retries > 10)
-            { 
+            {
                 tries = true;
-                Thread.Sleep(TimeOut);
+                Task.Delay(TimeOut*2);
             }
-            
+
             if (retries > 20)
             {
-                return;
+                break;
             }
 
-        } while (tries) ;
+        } while (tries);
+
+        http.Dispose();
+        return data;
+
+    }
+
+    public Site(string url , string? get_data_by_class, string? get_data_by_tags, int TimeOut=300) 
+    {
+
+
+        StringBuilder data = null;
+
+        Task<StringBuilder> t= Load(url, TimeOut);
+        t.Wait(TimeOut);
+
+        //не получилось ну фиг с ним
+        if ( t.IsFaulted ) { return; }
+        data = t.Result;
+          
 
         //Защита от слепков
-        data = data.Replace("/><", "/> <");
-        data = data.Replace("><", "> <");
-        data = data.Replace("₽", "р");
-        data = data.Replace("\u000A", " ");
-        data = data.Replace("\r", " ");
-        data = data.Replace("\n", " ");
-        data = data.Replace("\t", " ");
+         data.Replace("/><", "/> <");
+         data.Replace("><", "> <");
+         data.Replace("₽", "р");
+         data.Replace("\u000A", " ");
+         data.Replace("\r", " ");
+         data.Replace("\n", " ");
+         data.Replace("\t", " ");
 
 
         AngleSharp.Html.Parser.HtmlParser parser = new AngleSharp.Html.Parser.HtmlParser();
-        var doc = parser.ParseDocument(data);
+        var doc = parser.ParseDocument(data.ToString());
 
        _linx = doc.Links.Where(i => i != null).ToList();
 

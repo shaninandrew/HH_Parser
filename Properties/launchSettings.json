@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "ScanHH": {
+      "commandName": "Project",
+      "commandLineArgs": "программист_C#_cfg.json"
+    }
+  }
+}
