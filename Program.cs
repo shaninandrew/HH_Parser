@@ -89,8 +89,6 @@ public class ParseHH
     {
         TimeOut = pause;
         AllLinks = new List<IElement>();
-       
-
      
         Console.Write("Закачка: ");
         Task<Proffi[]> [] tasks = new  Task<Proffi[]>[max_page - min_page];
@@ -109,7 +107,7 @@ public class ParseHH
                 { 
                      using (Site site = new Site(url.Replace("*PAGE*", i.ToString()), "vacancy-serp-item-body",null,TimeOut))
                      {
-                       
+
 
                         if (site == null)
                         {
@@ -123,7 +121,6 @@ public class ParseHH
                         foreach (IElement item in site.GetAllClasses)
                         {
                              Proffi proffi = new Proffi("");
-                            
 
                              foreach (var span in item.GetElementsByTagName("span"))
                              {
@@ -196,67 +193,24 @@ public class ParseHH
         proffi_list.Clear();
 
         
+
         //мониторим
         int  active = tasks.Length;
+        
+
+       
         do
         {
-            done = true;
-
-            // List<int> delete = new List<int>();
-            // delete.Clear();
-
-            Console.Write($"Ожидаем завершения ... {active} из {tasks.Length} \r");
-            int ended_index = Task.WaitAny(tasks);
-            if (ended_index != null)
-            {
-                active--;
-                var t = tasks[ended_index];
-                proffi_list.AddRange(t.Result);
-                proffi_list = proffi_list.Distinct().ToList();  
-
+            foreach (var t in tasks)
+            {                                      
+                active = (t.IsCompletedSuccessfully && t.Result!=null && t.Result.Length>0) ? active - 1 : active;
+                Thread.Sleep(100);
             }
-
-            /*
-             * foreach (Task<Proffi[]> t in tasks)
-            {
-                if (t.IsCompleted) 
-                { 
-
-                    if (t.Result != null)
-                    {
-                       
-                        if (t.Result.Length > 0)
-                        {
-                            active--;
-                            proffi_list.AddRange(t.Result);
-                            delete.Add(t.Id);
-                            
-                        }
-                    }
-                };
-   
-            }    */
-
-            /* try
-             {
-                 foreach (int del in delete)
-                 {
-                     tasks.Remove( tasks.Where(i => i.Id == del).First());
-
-                 }
-                 GC.Collect();
-             }
-             catch { }
-              */
-
             
-            // Console.Write(".");
-            //Task.Delay(1000);
-            //Thread.Sleep(100);
-
-
-        } while (active > 0); //((active>0) && (tasks.Length>0)) ;
-
+            done=active < 0;
+            Console.Write($"Ожидаем завершения ... {(int)((double)active*100/ tasks.Length)}% \r");
+        }
+        while ( !done );
 
         end_ = DateTime.Now;
         TimeSpan step2 = TimeSpan.FromTicks(end_.Ticks - start.Ticks);
@@ -270,7 +224,7 @@ public class ParseHH
         Console.Write("Собираем данные ...");
         Console.WriteLine("");
 
-      /*  
+        
         
         foreach (Task<Proffi[]> t in tasks)
         {
@@ -302,7 +256,7 @@ public class ParseHH
             Console.WriteLine($"Копирка  - {step3.TotalMilliseconds} размер отчета {proffi_list.Count}");
 
         }     
-      */  
+      
         // tasks.Clear();
         Console.Write(" сортируем... ");
 
