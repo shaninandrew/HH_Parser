@@ -452,12 +452,29 @@ public class Proffi
 
                         _Max_Salary = _Max_Salary.Replace("р", "").Trim(); ;
                         _Min_Salary = _Min_Salary.Replace("р", "").Trim(); ;
+                
+                        _Max_Salary = _Max_Salary.Replace("от", "").Trim(); ;
+                        _Min_Salary = _Min_Salary.Replace("от", "").Trim(); ;
 
-            }    
+                    }
+
+                if (x.IndexOf("от") > 0)
+                {
+
+
+                    _Min_Salary = _Max_Salary.Replace("от", "").Trim(); ;
+
+                    _Max_Salary = _Min_Salary;
+
+                    _Max_Salary = _Max_Salary.Replace("р", "").Trim(); ;
+                    _Min_Salary = _Min_Salary.Replace("р", "").Trim(); ;
+
+
+                }
 
             // - -- пЕРЕВОД ВАЛЮТ
 
-                        if (_Min_Salary.IndexOf("br") > -1)
+            if (_Min_Salary.IndexOf("br") > -1)
                         {
                             _Min_Salary = _Min_Salary.Replace("br", "");
                             _Min_Salary = ((int)(int.Parse(_Min_Salary) * BEL_RUB)).ToString() + "р";
