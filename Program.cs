@@ -350,11 +350,21 @@ public class ParseHH
                 */
 
                 proffi.Task = proffi.Task.Trim();
-                proffi.Address = proffi.Address.Trim();
+                //обрезка хлама
+                string test_address = "";
+
+                try
+                {
+                    test_address = proffi.Address.Trim().Substring(0, proffi.Address.IndexOf(".") - 3).Trim();
+                    proffi.Address = test_address;
+                }
+                catch
+                { }
+
                 proffi.Grade = proffi.Grade.Trim();
                 proffi.Name = proffi.Name.Trim();
-                proffi.Skills = proffi.Skills.Trim();
-
+                proffi.Skills = proffi.Skills.Trim().Replace("•","/");
+                                                 
                 //выгружаем в промежзуточный кэш
                 proffi_list.Add(proffi);
 
