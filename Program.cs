@@ -69,11 +69,13 @@ Thread.Sleep(1000);
     }
 
 
+//https://career.habr.com/vacancies?page=2&type=suitable
 
 
-/// <summary>
-/// Класс для обработки сайта HH.ru
-/// </summary>
+
+    /// <summary>
+    /// Класс для обработки сайта HH.ru
+    /// </summary>
 public class ParseHH
 {
   
@@ -146,13 +148,24 @@ public class ParseHH
     }
 
 
+    async Task<Proffi[]> ProcessPage(string url, int page_index)
+    {
+        Uri check = new Uri(url);
+
+        if (check.Host.ToLower() == "hh.ru")
+           return( await ProcessPageHH(url, page_index));
+
+        if (check.Host.ToLower() == "career.habr.com")
+            return (await ProcessPageHabr(url, page_index));
+    }
+
     /// <summary>
     /// Обработка страницы 
     /// </summary>
     /// <param name="url"></param>
     /// <param name="page_index"></param>
     /// <returns></returns>
-    async Task<Proffi[]> ProcessPage(string url ,int page_index )
+    async Task<Proffi[]> ProcessPageHH(string url ,int page_index )
     {
         int i = page_index;
         List<Proffi> proffi_list = null;
@@ -236,6 +249,94 @@ public class ParseHH
         
         //отдаем кэш с аналитикой
         return proffi_list.Distinct().ToArray(); 
+    }
+
+
+
+    async Task<Proffi[]> ProcessPageHabr(string url, int page_index)
+    {
+        int i = page_index;
+        List<Proffi> proffi_list = null;
+
+        using (Site site = new Site(url.Replace("*PAGE*", i.ToString()), "vacancy-serp-item-body", null, TimeOut))
+        {
+            if (site == null)
+            {
+                return (null);
+            }
+
+            //Лоакльный список
+            proffi_list = new List<Proffi>();
+            foreach (IElement item in site.GetAllClasses)
+            {
+                Proffi proffi = new Proffi("");
+
+                foreach (var span in item.GetElementsByTagName("span"))
+                {
+                    // serp-item__title - Name 
+                    // bloko-header-section-2  - ЗП
+                    if (span.ClassName == null)
+                    {
+                        proffi.Name = span.TextContent;
+                        try
+                        {
+                            proffi.LinkHref = span.ChildNodes.GetElementsByTagName("a").First().GetAttribute("href").ToString();
+                            proffi.LinkHref = proffi.LinkHref.Substring(0, proffi.LinkHref.IndexOf("?"));
+                        }
+                        catch { }
+                    }
+                    if (span.ClassName == "bloko-header-section-2")
+                        proffi._Salary = span.TextContent.ToLower().Replace(" ", "").Replace("от", "").Replace("до", "").Replace("?", "");
+
+                }//foreac
+                 //
+                proffi.Address = item.GetElementsByClassName("bloko-text").First().TextContent;
+
+                // g-user-content  - функции
+                //proffi._Function = item.GetElementsByClassName("g-user-content").First().TextContent;
+
+                if (proffi.LinkHref != "")
+                {
+                    //дергаем списки        навыков
+
+                    Site sub = new Site(proffi.LinkHref, "bloko-tag-list", null, TimeOut);
+                    proffi.Skills = "";
+                    //защита от косяка
+                    try
+                    {
+                        foreach (Element e in sub.GetAllClasses)
+                        {
+                            proffi.Skills += e.TextContent + " // ";
+                        }
+                    }
+                    catch { }
+
+                    //если был отклик
+                    try
+                    {
+                        proffi.Response = sub.GetAllTags.Where(t => t.ClassName == "vacancy-response").First().TextContent.Replace(";", "").Replace("\r\n", "");
+                    }
+                    catch { }
+                    try
+                    {
+                        proffi.Task = sub.GetAllTags.Where(t => t.ClassName == "g-user-content").First().TextContent.Replace(";", "").Replace("\r\n", "");
+                    }
+                    catch { }
+
+
+                }
+
+                //выгружаем в промежзуточный кэш
+                proffi_list.Add(proffi);
+
+
+            }     //for
+                  //чистим дубли
+
+        } //using
+
+        //отдаем кэш с аналитикой
+        return proffi_list.Distinct().ToArray();
     }
 
 }
