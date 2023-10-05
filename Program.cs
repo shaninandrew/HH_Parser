@@ -298,7 +298,7 @@ public class ParseHH
                     if (span.ClassName == "vacancy-card__title")
                     {
                         proffi.Name = span.TextContent;
-                        proffi.LinkHref = span.GetElementsByTagName("a").First().GetAttribute("href");
+                        proffi.LinkHref = "https://career.habr.com" + span.GetElementsByTagName("a").First().GetAttribute("href");
                     }
 
                     if (span.ClassName == "vacancy-card__salary")
