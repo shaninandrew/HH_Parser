@@ -5,6 +5,7 @@ using AngleSharp.Html;
 using AngleSharp.Io;
 using ScanHH;
 using System;
+using System.ComponentModel;
 using System.Data;
 using System.Diagnostics;
 using System.Linq;
@@ -13,6 +14,7 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.Json;
 using System.Threading;
+using System.Xml.Linq;
 using static System.Net.WebRequestMethods;
 using static System.Runtime.InteropServices.JavaScript.JSType;
 
@@ -113,9 +115,15 @@ public class ParseHH
             Task<Proffi[]> T = ProcessPage(url, ix);
 
             T.ContinueWith(t => 
-                { 
+                {
+                    
                     Console.Write("x"); 
-                    Loading--; 
+                    Loading--;
+
+                    if (T == null) return;
+                    if (T.Result == null) return;
+
+
                     proffi_list_all.AddRange(T.Result);
                     proffi_list_all = proffi_list_all.Distinct().ToList();
                     GC.Collect();
@@ -153,10 +161,12 @@ public class ParseHH
         Uri check = new Uri(url);
 
         if (check.Host.ToLower() == "hh.ru")
-           return( await ProcessPageHH(url, page_index));
+           return   (   await ProcessPageHH(url, page_index));
 
         if (check.Host.ToLower() == "career.habr.com")
-            return (await ProcessPageHabr(url, page_index));
+            return  (   await ProcessPageHabr(url, page_index));
+        
+        return null;
     }
 
     /// <summary>
@@ -198,7 +208,7 @@ public class ParseHH
                         catch { }
                     }
                     if (span.ClassName == "bloko-header-section-2")
-                        proffi._Salary = span.TextContent.ToLower().Replace(" ", "").Replace("от", "").Replace("до", "").Replace("?", "");
+                        proffi._Salary = span.TextContent.ToLower().Replace("  ", " ").Replace("?", "");
 
                 }//foreac
                  //
@@ -258,7 +268,8 @@ public class ParseHH
         int i = page_index;
         List<Proffi> proffi_list = null;
 
-        using (Site site = new Site(url.Replace("*PAGE*", i.ToString()), "vacancy-serp-item-body", null, TimeOut))
+        //body > div.page - container > div > div > div.content - wrapper > div > div > div.section - group.section - group--gap - medium > div.transition - expand > div > div > div.section - group.section - group--gap - medium > div:nth - child(1) > div > div > div > 
+        using (Site site = new Site(url.Replace("*PAGE*", i.ToString()), "vacancy-card__info", null, TimeOut))
         {
             if (site == null)
             {
@@ -270,61 +281,79 @@ public class ParseHH
             foreach (IElement item in site.GetAllClasses)
             {
                 Proffi proffi = new Proffi("");
-
-                foreach (var span in item.GetElementsByTagName("span"))
+                //  body > div.page-container > div > div > div.content-wrapper > div > div > div.section-group.section-group--gap-medium > div.transition-expand > div > div > div.section-group.section-group--gap-medium > div:nth-child(7) > div > div > div > div.vacancy-card__info
+                
+                foreach (var span in item.Children)
                 {
-                    // serp-item__title - Name 
-                    // bloko-header-section-2  - ЗП
-                    if (span.ClassName == null)
-                    {
-                        proffi.Name = span.TextContent;
-                        try
-                        {
-                            proffi.LinkHref = span.ChildNodes.GetElementsByTagName("a").First().GetAttribute("href").ToString();
-                            proffi.LinkHref = proffi.LinkHref.Substring(0, proffi.LinkHref.IndexOf("?"));
-                        }
-                        catch { }
-                    }
-                    if (span.ClassName == "bloko-header-section-2")
-                        proffi._Salary = span.TextContent.ToLower().Replace(" ", "").Replace("от", "").Replace("до", "").Replace("?", "");
+                  //  Console.WriteLine($"{span.TagName}  {span.ClassName} {span.TextContent}");
 
-                }//foreac
-                 //
-                proffi.Address = item.GetElementsByClassName("bloko-text").First().TextContent;
+                    if (span.ClassName.Equals ("vacancy-card__info"))
+                    {
+                        proffi.Name         = span.GetElementsByClassName("vacancy-card__title").First().TextContent;
+                        proffi._Salary      = span.GetElementsByClassName("vacancy-card__salary").First().TextContent;
+                        proffi.LinkHref     = span.GetElementsByTagName("a").First().Attributes["href"].Value;
+                        proffi.Address      = item.GetElementsByClassName("vacancy-card__company").First().TextContent;
+                    }
+
+                    if (span.ClassName == "vacancy-card__title")
+                        proffi.Name = span.TextContent;
+
+                    if (span.ClassName == "vacancy-card__salary")
+                        proffi._Salary = span.TextContent.ToLower();
+
+                    if (span.ClassName == "vacancy-card__company")
+                        proffi.Address = span.TextContent;
+
+                    if (span.ClassName == "vacancy-card__skills")
+                    {
+                        proffi.Grade = span.Children.First().TextContent;
+                        proffi.Skills = span.TextContent;
+                    }
+
+
+                }//foreach
+
+                //структура спанов
+               /*
+                * var childs = item.GetElementsByClassName("vacancy-card__skills").Children("inline-list");
+
+                proffi.Grade = childs.First().TextContent;
+                proffi.Skills = "";
+                foreach (IElement e in childs)
+                {
+                    if (e != childs.First())
+                    { proffi.Skills += e.TextContent; }
+                }    
+               */
 
                 // g-user-content  - функции
                 //proffi._Function = item.GetElementsByClassName("g-user-content").First().TextContent;
 
+                /*
                 if (proffi.LinkHref != "")
                 {
                     //дергаем списки        навыков
 
-                    Site sub = new Site(proffi.LinkHref, "bloko-tag-list", null, TimeOut);
+                    Site sub = new Site(proffi.LinkHref, "basic-section--appearance-vacancy-description", null, TimeOut);
                     proffi.Skills = "";
                     //защита от косяка
                     try
                     {
                         foreach (Element e in sub.GetAllClasses)
                         {
-                            proffi.Skills += e.TextContent + " // ";
+                            proffi.Task += e.TextContent + " // ";
                         }
                     }
                     catch { }
 
-                    //если был отклик
-                    try
-                    {
-                        proffi.Response = sub.GetAllTags.Where(t => t.ClassName == "vacancy-response").First().TextContent.Replace(";", "").Replace("\r\n", "");
-                    }
-                    catch { }
-                    try
-                    {
-                        proffi.Task = sub.GetAllTags.Where(t => t.ClassName == "g-user-content").First().TextContent.Replace(";", "").Replace("\r\n", "");
-                    }
-                    catch { }
-
-
                 }
+                */
+
+                proffi.Task = proffi.Task.Trim();
+                proffi.Address = proffi.Address.Trim();
+                proffi.Grade = proffi.Grade.Trim();
+                proffi.Name = proffi.Name.Trim();
+                proffi.Skills = proffi.Skills.Trim();
 
                 //выгружаем в промежзуточный кэш
                 proffi_list.Add(proffi);
@@ -396,8 +425,8 @@ public class Proffi
     /// <summary>
     /// Размер вознаграждения без единииц в руб
     /// </summary>
-    public string GetMin { get { return _Min_Salary.Replace("р",""); } }
-    public string GetMax { get { return _Max_Salary.Replace("р", "");  } }
+    public string GetMin { get { return _Min_Salary.Replace("р","").Replace(" ",""); } }
+    public string GetMax { get { return _Max_Salary.Replace("р", "").Replace(" ", "");  } }
 
     public string _Salary 
         {
@@ -412,10 +441,19 @@ public class Proffi
                         {
                             _Max_Salary = x;
                             _Min_Salary = _Max_Salary;
-            }
+                        }
 
 
+                    if (x.IndexOf("до")>0)
+                    {
+                        _Max_Salary =  x.Substring(x.IndexOf("до") + 2).Trim();
+                        
+                        _Min_Salary = x.Substring(0,x.IndexOf("до") ).Replace("от","").Trim();
 
+                        _Max_Salary = _Max_Salary.Replace("р", "").Trim(); ;
+                        _Min_Salary = _Min_Salary.Replace("р", "").Trim(); ;
+
+            }    
 
             // - -- пЕРЕВОД ВАЛЮТ
 
@@ -673,6 +711,7 @@ class Site   :IDisposable
          data.Replace("\r", " ");
          data.Replace("\n", " ");
          data.Replace("\t", " ");
+         data.Replace("•", "");
 
 
         AngleSharp.Html.Parser.HtmlParser parser = new AngleSharp.Html.Parser.HtmlParser();
