@@ -564,7 +564,6 @@ class Site   :IDisposable
         if ( t.IsFaulted ) { return; }
         data = t.Result;
           
-
         //Защита от слепков
          data.Replace("/><", "/> <");
          data.Replace("><", "> <");
