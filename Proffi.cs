@@ -113,6 +113,8 @@ namespace ScanHH
                 }
 
                 // - -- пЕРЕВОД ВАЛЮТ
+                _Min_Salary = _Min_Salary.Replace(" ", "");
+                _Max_Salary = _Max_Salary.Replace(" ", "");
 
                 if (_Min_Salary.IndexOf("br") > -1)
                 {
